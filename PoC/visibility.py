@@ -25,13 +25,7 @@ def calc_hidden_height(observer_height: float, target_distance: float) -> float:
         hidden_height = np.sqrt((R ** 2) + (dist_horizon_to_target ** 2)) - R
         return hidden_height
 
-# 例1: 観測者(h=100m)から、水平線(約35.7km)より近い20km先の対象物を見る
-h = 100.0
-d1 = 20000.0 # 20km
-x1 = calc_hidden_height(h, d1)
-print(f"距離{d1/1000}kmの地点で隠される高さ: {x1:.2f} m")
-
-# 例2: 観測者(h=100m)から、水平線より遠い50km先の対象物を見る
-d2 = 50000.0 # 50km
-x2 = calc_hidden_height(h, d2)
-print(f"距離{d2/1000}kmの地点で隠される高さ: {x2:.2f} m")
+h = 10
+d = 30000
+x = calc_hidden_height(h, d)
+print(f"視点の標高{h}mの観測者から見て，距離{d/1000}kmの地点で隠される高さ: {x} m")
