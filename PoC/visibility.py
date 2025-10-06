@@ -186,11 +186,16 @@ def calc_horizon_profile(
     
     return horizon_profile, azimuths
 
-lat, lon = 34.41479881733565, 132.4359613353019
+lat, lon = 34.41480910344528, 132.43595360345353
 
-horizon_profile, azimuths = calc_horizon_profile(observer_lat=lat, observer_lon=lon)
+horizon_profile, azimuths = calc_horizon_profile(
+    observer_lat=lat,
+    observer_lon=lon,
+    max_distance=150000,
+    num_samples=150
+    )
 
-plt.figure(figsize=(15,6))
+plt.figure(figsize=(15,2))
 plt.plot(azimuths, horizon_profile)
 plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
 plt.xlabel("Azimuth (degrees from North)")
