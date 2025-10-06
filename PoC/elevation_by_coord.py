@@ -61,7 +61,7 @@ def get_elevation_by_coord(lat: float, lon: float) -> float:
     except IndexError:
         return np.nan
 
-lat, lon = 34.383223, 132.509231
+lat, lon = 34.641541, 131.803493
 
 print("--- 1回目の標高取得 ---")
 elevation1 = get_elevation_by_coord(lat, lon)
