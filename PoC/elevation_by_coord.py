@@ -41,7 +41,7 @@ def get_elevation_by_coord(lat: float, lon: float) -> float:
     任意の緯度経度に対応するGeoTIFFファイルを見つけて標高値を返す．
     """
     # 緯度経度から3次メッシュコードを計算
-    tertiary_meshcode = get_meshcode_by_coord(lat=34.4223, lon=132.7441, n=3)
+    tertiary_meshcode = get_meshcode_by_coord(lat, lon, n=3)
     if not tertiary_meshcode:
         return np.nan
     
@@ -61,18 +61,17 @@ def get_elevation_by_coord(lat: float, lon: float) -> float:
     except IndexError:
         return np.nan
 
-target_lat = 34.4223
-target_lon = 132.7441
+lat, lon = 34.383223, 132.509231
 
 print("--- 1回目の標高取得 ---")
-elevation1 = get_elevation_by_coord(target_lat, target_lon)
+elevation1 = get_elevation_by_coord(lat, lon)
 if not np.isnan(elevation1):
     print(f"✅ 標高: {elevation1:.2f} m")
 else:
     print("❌ 標高データを取得できませんでした。")
 
 print("\n--- 2回目の標高取得（キャッシュが効くはず） ---")
-elevation2 = get_elevation_by_coord(target_lat, target_lon)
+elevation2 = get_elevation_by_coord(lat, lon)
 if not np.isnan(elevation2):
     print(f"✅ 標高: {elevation2:.2f} m")
 else:
