@@ -1,6 +1,69 @@
+import jismesh.utils as ju
+import os
+import rasterio
+from functools import lru_cache
 import numpy as np
+import pyproj
+import matplotlib.pyplot as plt
 
-R = 6371000.0 # 地球の半径（m）
+EARTH_R = 6371000.0 # 地球の半径（m）
+
+def get_meshcode_by_coord(lat, lon, n):
+    """
+    緯度・経度に対応するn次メッシュを返す．
+    ・1次メッシュ：約80km四方
+    ・2次メッシュ：約10km四方
+    ・3次メッシュ：約1km四方
+    """
+    return ju.to_meshcode(lat, lon, n)
+
+@lru_cache(maxsize=128)
+def get_dsm_dataset(tertiary_meshcode):
+    """
+    3次メッシュコードに対応するrasterioデータセットを返す．
+    結果は，LRUキャッシュによってメモリに保持される．
+    """
+    # print(f"DEBUG: Cache miss! Opening dsm file for {tertiary_meshcode}.")
+
+    # メッシュコードが3次メッシュであるか確認
+    if len(str(tertiary_meshcode)) != 8:
+        raise ValueError(f"Invalid tertiary meshcode: {tertiary_meshcode}. It must be 8 digits.")
+    
+    tertiary_meshcode = str(tertiary_meshcode)
+    first = tertiary_meshcode[0:4]
+    second = tertiary_meshcode[4:6]
+    third = tertiary_meshcode[6:]
+    path_dsm_tiff = f"/Volumes/iFile-1/DEM1A/{first}/{first}-{second}/FG-GML-{first}-{second}-{third}-DEM1A-20250502.tif"
+
+    if not os.path.exists(path_dsm_tiff):
+        return None
+    else:
+        return rasterio.open(path_dsm_tiff)
+
+def get_elevation_by_coord(lat: float, lon: float) -> float:
+    """
+    任意の緯度経度に対応するGeoTIFFファイルを見つけて標高値を返す．
+    """
+    # 緯度経度から3次メッシュコードを計算
+    tertiary_meshcode = get_meshcode_by_coord(lat, lon, n=3)
+    if not tertiary_meshcode:
+        return np.nan
+    
+    # 3次メッシュコードに対応するrasterioデータセットを取得（キャッシュあり）
+    dataset = get_dsm_dataset(tertiary_meshcode)
+    if dataset is None:
+        # print(f"DEBUG: DSM file for meshcode {tertiary_meshcode} not found.")
+        return np.nan
+    
+    # 指定した座標の標高値を取得
+    try:
+        # .sample()はジェネレータを返すため，next()で最初の（そして唯一の）結果を取り出す．
+        # その結果はNumPy配列なので，[0]で中の数値を取り出す．
+        # dataset.sample()には [(経度, 緯度)] の順で座標を渡すことに注意！
+        elevation = next(dataset.sample([(lon, lat)]))[0]
+        return elevation
+    except IndexError:
+        return np.nan
 
 def calc_hidden_height(observer_height: float, target_distance: float) -> float:
     """
@@ -14,14 +77,14 @@ def calc_hidden_height(observer_height: float, target_distance: float) -> float:
         (float): 地球の丸みによって隠される高さ（m）
     """
     # 観測者の視点から水平線までの距離（厳密式）
-    dist_to_horizon = np.sqrt((2 * R * observer_height) + (observer_height ** 2))
+    dist_to_horizon = np.sqrt((2 * EARTH_R * observer_height) + (observer_height ** 2))
 
     if target_distance < dist_to_horizon:
         # 対象が水平線より手前にある場合，地球の丸みによって対象が隠される事は無い．
         return 0.0
     else:
         dist_horizon_to_target = target_distance - dist_to_horizon
-        hidden_height = np.sqrt((R ** 2) + (dist_horizon_to_target ** 2)) - R
+        hidden_height = np.sqrt((EARTH_R ** 2) + (dist_horizon_to_target ** 2)) - EARTH_R
         return hidden_height
 
 def calc_viewing_angle(observer_height: float, target_height: float, distance: float) -> float:
@@ -42,29 +105,97 @@ def calc_viewing_angle(observer_height: float, target_height: float, distance: f
     hidden_by_curvature = calc_hidden_height(observer_height=observer_height, target_distance=distance) # 地球の丸みによって隠される高さ
     apparent_target_height = target_height - hidden_by_curvature # 観測者から見た，対象の見かけの高さ
     height_diff = apparent_target_height - observer_height
-    angle_rad = np.arctan(height_diff / distance)
+    angle_rad = np.arctan(height_diff / distance) # 近似式（2地点のなす中心角が小さい事を利用）
 
     return np.degrees(angle_rad)
 
-# --- 使用例 ---
-obs_h = 200.0 # 観測者の標高: 200m
+def calc_horizon_profile(
+        observer_lat: float,
+        observer_lon: float,
+        observer_eye_height: float = 1.5,
+        num_directions: int = 360,
+        max_distance: float = 150000.0,
+        num_samples: int = 150
+        ) -> np.ndarray:
+    """
+    観測地点から360°の水平線・稜線プロファイルを計算する．
 
-# ケース1: 近くの自分より高い山を見る
-# 距離5km, 標高1000mの山
-angle1 = calc_viewing_angle(obs_h, 1000.0, 5000.0)
-print(f"ケース1 (高い山): {angle1:.2f}°")
+    Args:
+        observer_lat (float): 観測者の緯度
+        observer_lon (float): 観測者の経度
+        observer_eye_height (float): 観測者の身長による視点の高さ（m）
+        num_directions (int): 走査する方位の数（解像度）
+        max_distance (float): 最大探索距離（m）
+        num_samples (int): 1方位あたりのサンプリング点数
 
-# ケース2: 遠くの自分より低い丘を見る
-# 距離50km, 標高300mの丘（丸みでかなり隠される）
-angle2 = calc_viewing_angle(obs_h, 300.0, 50000.0)
-print(f"ケース2 (遠い丘): {angle2:.2f}°")
+    Returns:
+        (np.ndarray): 各方位における最大仰角（稜線の仰角）を格納した配列
+    """
+    # 観測者の準備
+    observer_ground_elev = get_elevation_by_coord(lat=observer_lat, lon=observer_lon)
+    if np.isnan(observer_ground_elev):
+        raise ValueError("観測地点の標高が取得できませんでした．")
+    observer_height = observer_ground_elev + observer_eye_height
 
-# ケース3: 海を見る
-# 距離10km, 標高0mの海面
-angle3 = calc_viewing_angle(obs_h, 0.0, 10000.0)
-print(f"ケース3 (海): {angle3:.2f}°")
+    # WGS84測地系に基づく測地線計算オブジェクト
+    geod = pyproj.Geod(ellps='WGS84')
 
-# ケース4: 水平線より遠くにある、かなり高い山を見る
-# 距離80km, 標高700mの山
-angle4 = calc_viewing_angle(obs_h, 700.0, 80000.0)
-print(f"ケース4 (遠方の山): {angle4:.2f}°")
+    azimuths = np.linspace(0, 360, num_directions, endpoint=False) # 各方位
+    distances = np.geomspace(1, max_distance, num_samples) # 各サンプリング点
+
+    horizon_profile = np.zeros(num_directions) # 結果を格納する配列
+
+    # 全方位の走査
+    for i, azimuth in enumerate(azimuths):
+        max_angle = -90.0 # 現在の方位での最大仰俯角を記録
+
+        # 指定した方位と距離にある全サンプリング点の緯度経度を一度に計算
+        # https://qiita.com/Yoshiki443/items/0882a8dda916d6d424bb
+        lons, lats, back_azimuth = geod.fwd(
+            np.full(num_samples, observer_lon),
+            np.full(num_samples, observer_lat),
+            np.full(num_samples, azimuth),
+            distances
+        )
+
+        for j, dist in enumerate(distances):
+            target_lat, target_lon = lats[j], lons[j]
+
+            # サンプリング点の標高を取得
+            target_height = get_elevation_by_coord(lat=target_lat, lon=target_lon)
+            if np.isnan(target_height):
+                continue # 標高データが無ければスキップ
+
+            # 観測者から見た，このサンプリング点の仰俯角を計算
+            current_angle = calc_viewing_angle(
+                observer_height=observer_height,
+                target_height=target_height,
+                distance=dist
+            )
+
+            # これまでに見つかった最大仰俯角より大きければ更新
+            if current_angle > max_angle:
+                max_angle = current_angle
+        
+        # この方位角での最大仰俯角を記録
+        horizon_profile[i] = max_angle
+
+        # 進捗表示
+        if (i + 1) % 30 == 0:
+            print(f"進捗: {i+1}/{num_directions}方位完了...")
+    
+    return horizon_profile, azimuths
+
+lat, lon = 34.41479881733565, 132.4359613353019
+
+horizon_profile, azimuths = calc_horizon_profile(observer_lat=lat, observer_lon=lon)
+
+plt.figure(figsize=(15,6))
+plt.plot(azimuths, horizon_profile)
+plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
+plt.xlabel("Azimuth (degrees from North)")
+plt.ylabel("Elevation Angle (degrees)")
+plt.xticks(np.arange(0, 361, 45), ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
+plt.grid(True)
+plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
+plt.show()
