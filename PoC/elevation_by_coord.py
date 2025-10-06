@@ -2,6 +2,7 @@ import jismesh.utils as ju
 import os
 import rasterio
 from functools import lru_cache
+import numpy as np
 
 def get_meshcode_by_coord(lat, lon, n):
     """
@@ -13,7 +14,7 @@ def get_meshcode_by_coord(lat, lon, n):
     return ju.to_meshcode(lat, lon, n)
 
 @lru_cache(maxsize=128)
-def get_dsm_by_tertiary_meshcode(tertiary_meshcode):
+def get_dsm_dataset(tertiary_meshcode):
     """
     3次メッシュコードに対応するrasterioデータセットを返す．
     結果は，LRUキャッシュによってメモリに保持される．
@@ -35,14 +36,44 @@ def get_dsm_by_tertiary_meshcode(tertiary_meshcode):
     else:
         return rasterio.open(path_dsm_tiff)
 
-tertiary_meshcode = get_meshcode_by_coord(lat=34.4223, lon=132.7441, n=3)
-if tertiary_meshcode:
-    # 1回目の呼び出し（ディスクからファイルを開く）
-    dataset1 = get_dsm_by_tertiary_meshcode(tertiary_meshcode)
-    if dataset1:
-        print(f"1回目: {dataset1.name} を取得")
+def get_elevation_by_coord(lat: float, lon: float) -> float:
+    """
+    任意の緯度経度に対応するGeoTIFFファイルを見つけて標高値を返す．
+    """
+    # 緯度経度から3次メッシュコードを計算
+    tertiary_meshcode = get_meshcode_by_coord(lat=34.4223, lon=132.7441, n=3)
+    if not tertiary_meshcode:
+        return np.nan
+    
+    # 3次メッシュコードに対応するrasterioデータセットを取得（キャッシュあり）
+    dataset = get_dsm_dataset(tertiary_meshcode)
+    if dataset is None:
+        print(f"DEBUG: DSM file for meshcode {tertiary_meshcode} not found.")
+        return np.nan
+    
+    # 指定した座標の標高値を取得
+    try:
+        # .sample()はジェネレータを返すため，next()で最初の（そして唯一の）結果を取り出す．
+        # その結果はNumPy配列なので，[0]で中の数値を取り出す．
+        # dataset.sample()には [(経度, 緯度)] の順で座標を渡すことに注意！
+        elevation = next(dataset.sample([(lon, lat)]))[0]
+        return elevation
+    except IndexError:
+        return np.nan
 
-    # 2回目の呼び出し（キャッシュから瞬時に取得）
-    dataset2 = get_dsm_by_tertiary_meshcode(tertiary_meshcode)
-    if dataset2:
-        print(f"2回目: {dataset2.name} を取得")
+target_lat = 34.4223
+target_lon = 132.7441
+
+print("--- 1回目の標高取得 ---")
+elevation1 = get_elevation_by_coord(target_lat, target_lon)
+if not np.isnan(elevation1):
+    print(f"✅ 標高: {elevation1:.2f} m")
+else:
+    print("❌ 標高データを取得できませんでした。")
+
+print("\n--- 2回目の標高取得（キャッシュが効くはず） ---")
+elevation2 = get_elevation_by_coord(target_lat, target_lon)
+if not np.isnan(elevation2):
+    print(f"✅ 標高: {elevation2:.2f} m")
+else:
+    print("❌ 標高データを取得できませんでした。")
