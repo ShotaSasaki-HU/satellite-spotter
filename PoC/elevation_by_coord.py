@@ -29,7 +29,7 @@ def get_dsm_dataset(tertiary_meshcode):
     first = tertiary_meshcode[0:4]
     second = tertiary_meshcode[4:6]
     third = tertiary_meshcode[6:]
-    path_dsm_tiff = f"/Volumes/iFile-1/DEM1A/{first}/{first}-{second}/FG-GML-{first}-{second}-{third}-DEM1A-20250502.tif"
+    path_dsm_tiff = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}/FG-GML-{first}-{second}-{third}-DEM1A-20250502.tif"
 
     if not os.path.exists(path_dsm_tiff):
         return None
@@ -61,7 +61,7 @@ def get_elevation_by_coord(lat: float, lon: float) -> float:
     except IndexError:
         return np.nan
 
-lat, lon = 34.641541, 131.803493
+lat, lon = 34.40707685351896, 132.72144020000883
 
 print("--- 1回目の標高取得 ---")
 elevation1 = get_elevation_by_coord(lat, lon)

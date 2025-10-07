@@ -33,7 +33,7 @@ def get_dsm_dataset(tertiary_meshcode):
     first = tertiary_meshcode[0:4]
     second = tertiary_meshcode[4:6]
     third = tertiary_meshcode[6:]
-    path_dsm_tiff = f"/Volumes/iFile-1/DEM1A/{first}/{first}-{second}/FG-GML-{first}-{second}-{third}-DEM1A-20250502.tif"
+    path_dsm_tiff = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}/FG-GML-{first}-{second}-{third}-DEM1A-20250502.tif"
 
     if not os.path.exists(path_dsm_tiff):
         return None
@@ -191,8 +191,8 @@ lat, lon = 34.41480910344528, 132.43595360345353
 horizon_profile, azimuths = calc_horizon_profile(
     observer_lat=lat,
     observer_lon=lon,
-    max_distance=150000,
-    num_samples=150
+    max_distance=50000,
+    num_samples=50
     )
 
 plt.figure(figsize=(15,2))

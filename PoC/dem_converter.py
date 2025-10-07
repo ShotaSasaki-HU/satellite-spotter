@@ -159,7 +159,7 @@ for input_folder in tqdm(input_folders):
             secondary = str(os.path.splitext(xml_file)[0][-20:-18])
             # tertiary = str(os.path.splitext(xml_file)[0][-17:-15])
 
-            dir_path = f"/Volumes/iFile-1/DEM1A/{primary}/{primary}-{secondary}"
+            dir_path = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{primary}/{primary}-{secondary}"
             if not os.path.exists(dir_path):
                 os.mkdir(dir_path)
 
