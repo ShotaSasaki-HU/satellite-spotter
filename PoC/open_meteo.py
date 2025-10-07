@@ -1,14 +1,16 @@
 import requests
 import pandas as pd
-from datetime import datetime, timezone
+from datetime import datetime
 from zoneinfo import ZoneInfo
+import numpy as np
 
-def calc_weather_score(lat: float, lon: float) -> tuple[float, dict]:
+# 実際にこのロジックを使用する場合は「責務の分離」に留意すること．
+def calc_cloud_visibility_score(lat: float, lon: float) -> tuple[float, float, float]:
     """
-    Open-Meteo APIから天気情報を取得し，天候スコアを計算する．
+    Open-Meteo APIから天気情報を取得し，雨スコア・雲量スコア・視程スコアを計算する．
 
     Returns:
-        (float, dict): 総合スコアと，その内訳の辞書
+        (float, float, float): 雨スコア・雲量スコア・視程スコア
     """
     # Open-Meteo APIのエンドポイントとパラメータ
     url = "https://api.open-meteo.com/v1/forecast"
@@ -29,57 +31,39 @@ def calc_weather_score(lat: float, lon: float) -> tuple[float, dict]:
     
     df = pd.DataFrame(data['hourly'])
     df['time'] = pd.to_datetime(df['time']).dt.tz_localize(ZoneInfo(data['timezone']))
-
-    print(df)
-    print()
     
     # 現在時刻に最も近い未来の予報を取得
     now = datetime.now(ZoneInfo(data['timezone']))
     future_forecasts = df[df['time'] >= now]
     if future_forecasts.empty:
         print("WARN: 現在時刻以降の予報が見つかりません。")
-        return 0.0, {}
+        return 0.0, 0.0, 0.0
     
     current_weather = future_forecasts.iloc[0]
+
+    print(current_weather)
+    print()
     
     precipitation = current_weather['precipitation']
     cloud_cover = current_weather['cloud_cover']
     visibility = current_weather['visibility']
 
-    # --- スコアリング ---
-    # 1. 雨のチェック
-    if precipitation > 0.0:
-        score = 0.0
-        details = {
-            "降水量(mm)": precipitation,
-            "雲量(%)": cloud_cover,
-            "視程(m)": visibility,
-            "判定": "雨のため観測不可"
-        }
-        return score, details
-
-    # 2. 雲係数の計算
-    cloud_factor = 1.0 - (cloud_cover / 100.0)
+    # 雨スコア
+    if precipitation > 0.0: # 雨が降っていれば即ゼロ
+        rain_score = 0.0
+    else:
+        rain_score = 1.0
     
-    # 3. 透明度係数の計算
+    # 雲量スコア
+    cloud_score = 1.0 - (cloud_cover / 100.0)
+    
+    # 視程スコア
     VIS_MIN = 5000.0  # これ以下はスコア0 (5km)
     VIS_MAX = 24140.0 # これ以上はスコア1 (24.14km)
-    
-    visibility_factor = (visibility - VIS_MIN) / (VIS_MAX - VIS_MIN)
-    visibility_factor = max(0.0, min(1.0, visibility_factor)) # 0.0〜1.0の範囲に収める
+    visibility_score = (visibility - VIS_MIN) / (VIS_MAX - VIS_MIN)
+    visibility_score = np.clip(visibility_score, 0, 1) # 0.0〜1.0の範囲に収める
 
-    # 4. 総合スコアの計算
-    score = cloud_factor * visibility_factor
-    
-    details = {
-        "降水量(mm)": precipitation,
-        "雲量(%)": cloud_cover,
-        "視程(m)": visibility,
-        "雲係数": round(cloud_factor, 2),
-        "透明度係数": round(visibility_factor, 2)
-    }
+    return rain_score, cloud_score, visibility_score
 
-    return score, details
-
-lat, lon = 33.842129580222284, 130.72070852147652
-print(calc_weather_score(lat=lat, lon=lon))
+lat, lon = 34.40875966610568, 132.72206522616142
+print(calc_cloud_visibility_score(lat=lat, lon=lon))
