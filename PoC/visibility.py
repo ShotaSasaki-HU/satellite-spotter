@@ -8,9 +8,17 @@ import matplotlib.pyplot as plt
 EARTH_R = 6371000.0 # 地球の半径（m）
 
 class RasterManager:
-    def __init__(self):
+    def __init__(self, path_nighttime_light: str):
         self.cache = {} # このインスタンス内だけのキャッシュ
         self.open_datasets = [] # 開いたデータセットを記録
+
+        # 初期化時に夜間光データを開いて属性として保持
+        try:
+            self.nighttime_light_dataset = rasterio.open(path_nighttime_light)
+            self.open_datasets.append(self.nighttime_light_dataset) # 閉じるために記録
+        except rasterio.errors.RasterioIOError:
+            print(f"ERROR: Nighttime light file not found at {path_nighttime_light}.")
+            self.nightlight_dataset = None
     
     # with構文が始まった時に呼ばれる
     def __enter__(self):
@@ -225,8 +233,10 @@ def calc_horizon_profile(
 
 lat, lon = 34.41480910344528, 132.43595360345353
 
+path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
+
 # with構文を抜けると，RasterManagerが自動で全てのファイルを閉じる．
-with RasterManager() as rm:
+with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
     horizon_profile, azimuths = calc_horizon_profile(
         raster_manager=rm,
         observer_lat=lat,
