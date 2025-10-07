@@ -63,6 +63,21 @@ def get_dsm_filepath(tertiary_meshcode):
     else:
         return path_dsm_tiff
 
+def sample_raster_by_coord(dataset, lat: float, lon: float, band: int | None = None):
+    """
+    ラスターデータから座標に対応する値を返す．
+
+    Args:
+        band: 指定した場合はそのバンドのみ（1始まり）．Noneなら全バンドのnumpy配列を返す．
+    """
+    # .sample()はジェネレータを返すため，next()で最初の（そして唯一の）結果を取り出す．
+    # その結果はNumPy配列なので，[0]で中の数値を取り出す．
+    # dataset.sample()には [(経度, 緯度)] の順で座標を渡すことに注意！
+    values = next(dataset.sample([(lon, lat)]))
+    if band is not None:
+        return values[band - 1] # rasterioは1始まり
+    return values
+
 def get_elevation_by_coord(lat: float, lon: float, raster_manager: RasterManager) -> float:
     """
     任意の緯度経度に対応するGeoTIFFファイルを見つけて標高値を返す．
@@ -80,10 +95,7 @@ def get_elevation_by_coord(lat: float, lon: float, raster_manager: RasterManager
     
     # 指定した座標の標高値を取得
     try:
-        # .sample()はジェネレータを返すため，next()で最初の（そして唯一の）結果を取り出す．
-        # その結果はNumPy配列なので，[0]で中の数値を取り出す．
-        # dataset.sample()には [(経度, 緯度)] の順で座標を渡すことに注意！
-        elevation = next(dataset.sample([(lon, lat)]))[0]
+        elevation = sample_raster_by_coord(dataset, lat=lat, lon=lon, band=1)
         if elevation < -9000: return np.nan # 一応安全のため
         return elevation
     except IndexError:
