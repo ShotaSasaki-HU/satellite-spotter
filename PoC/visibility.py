@@ -1,12 +1,39 @@
 import jismesh.utils as ju
 import os
 import rasterio
-from functools import lru_cache
 import numpy as np
 import pyproj
 import matplotlib.pyplot as plt
 
 EARTH_R = 6371000.0 # 地球の半径（m）
+
+class RasterManager:
+    def __init__(self):
+        self.cache = {} # このインスタンス内だけのキャッシュ
+        self.open_datasets = [] # 開いたデータセットを記録
+    
+    # with構文が始まった時に呼ばれる
+    def __enter__(self):
+        return self
+    
+    # with構文が終わった時に呼ばれる
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for dataset in self.open_datasets:
+            dataset.close()
+    
+    def get_dsm_dataset(self, tertiary_meshcode: str):
+        # キャッシュを確認
+        if tertiary_meshcode in self.cache:
+            return self.cache[tertiary_meshcode]
+        
+        path_dsm_tiff = get_dsm_filepath(tertiary_meshcode)
+        if path_dsm_tiff is None:
+            return None
+        
+        dataset = rasterio.open(path_dsm_tiff)
+        self.cache[tertiary_meshcode] = dataset
+        self.open_datasets.append(dataset) # 閉じるために記録
+        return dataset
 
 def get_meshcode_by_coord(lat, lon, n):
     """
@@ -17,14 +44,10 @@ def get_meshcode_by_coord(lat, lon, n):
     """
     return ju.to_meshcode(lat, lon, n)
 
-@lru_cache(maxsize=128)
-def get_dsm_dataset(tertiary_meshcode):
+def get_dsm_filepath(tertiary_meshcode):
     """
-    3次メッシュコードに対応するrasterioデータセットを返す．
-    結果は，LRUキャッシュによってメモリに保持される．
+    3次メッシュコードに対応するTIFFファイルのパスを返す．
     """
-    # print(f"DEBUG: Cache miss! Opening dsm file for {tertiary_meshcode}.")
-
     # メッシュコードが3次メッシュであるか確認
     if len(str(tertiary_meshcode)) != 8:
         raise ValueError(f"Invalid tertiary meshcode: {tertiary_meshcode}. It must be 8 digits.")
@@ -38,9 +61,9 @@ def get_dsm_dataset(tertiary_meshcode):
     if not os.path.exists(path_dsm_tiff):
         return None
     else:
-        return rasterio.open(path_dsm_tiff)
+        return path_dsm_tiff
 
-def get_elevation_by_coord(lat: float, lon: float) -> float:
+def get_elevation_by_coord(lat: float, lon: float, raster_manager: RasterManager) -> float:
     """
     任意の緯度経度に対応するGeoTIFFファイルを見つけて標高値を返す．
     """
@@ -49,8 +72,8 @@ def get_elevation_by_coord(lat: float, lon: float) -> float:
     if not tertiary_meshcode:
         return np.nan
     
-    # 3次メッシュコードに対応するrasterioデータセットを取得（キャッシュあり）
-    dataset = get_dsm_dataset(tertiary_meshcode)
+    # RasterManager経由で3次メッシュコードに対応するデータセットを取得
+    dataset = raster_manager.get_dsm_dataset(tertiary_meshcode)    
     if dataset is None:
         # print(f"DEBUG: DSM file for meshcode {tertiary_meshcode} not found.")
         return np.nan
@@ -61,6 +84,7 @@ def get_elevation_by_coord(lat: float, lon: float) -> float:
         # その結果はNumPy配列なので，[0]で中の数値を取り出す．
         # dataset.sample()には [(経度, 緯度)] の順で座標を渡すことに注意！
         elevation = next(dataset.sample([(lon, lat)]))[0]
+        if elevation < -9000: return np.nan # 一応安全のため
         return elevation
     except IndexError:
         return np.nan
@@ -110,6 +134,7 @@ def calc_viewing_angle(observer_height: float, target_height: float, distance: f
     return np.degrees(angle_rad)
 
 def calc_horizon_profile(
+        raster_manager: RasterManager,
         observer_lat: float,
         observer_lon: float,
         observer_eye_height: float = 1.5,
@@ -132,7 +157,7 @@ def calc_horizon_profile(
         (np.ndarray): 各方位における最大仰角（稜線の仰角）を格納した配列
     """
     # 観測者の準備
-    observer_ground_elev = get_elevation_by_coord(lat=observer_lat, lon=observer_lon)
+    observer_ground_elev = get_elevation_by_coord(lat=observer_lat, lon=observer_lon, raster_manager=raster_manager)
     if np.isnan(observer_ground_elev):
         raise ValueError("観測地点の標高が取得できませんでした．")
     observer_height = observer_ground_elev + observer_eye_height
@@ -162,7 +187,7 @@ def calc_horizon_profile(
             target_lat, target_lon = lats[j], lons[j]
 
             # サンプリング点の標高を取得
-            target_height = get_elevation_by_coord(lat=target_lat, lon=target_lon)
+            target_height = get_elevation_by_coord(lat=target_lat, lon=target_lon, raster_manager=raster_manager)
             if np.isnan(target_height):
                 continue # 標高データが無ければスキップ
 
@@ -188,11 +213,14 @@ def calc_horizon_profile(
 
 lat, lon = 34.41480910344528, 132.43595360345353
 
-horizon_profile, azimuths = calc_horizon_profile(
-    observer_lat=lat,
-    observer_lon=lon,
-    max_distance=50000,
-    num_samples=50
+# with構文を抜けると，RasterManagerが自動で全てのファイルを閉じる．
+with RasterManager() as rm:
+    horizon_profile, azimuths = calc_horizon_profile(
+        raster_manager=rm,
+        observer_lat=lat,
+        observer_lon=lon,
+        max_distance=50000,
+        num_samples=50
     )
 
 plt.figure(figsize=(15,2))
