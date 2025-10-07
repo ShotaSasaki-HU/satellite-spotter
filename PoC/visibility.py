@@ -8,6 +8,21 @@ import matplotlib.pyplot as plt
 EARTH_R = 6371000.0 # 地球の半径（m）
 
 class RasterManager:
+    """
+    ラスターデータ（GeoTIFF）の効率的な読み込みと，安全なリソース管理を行うためのコンテキストマネージャクラス．
+
+    # 目的
+    1. パフォーマンス向上：
+       1回の処理（例：稜線計算）の中で同じGeoTIFFファイルを何度も開くのを防ぐ．
+       一度開いたファイルはインスタンス内のキャッシュに保持し，ディスクI/Oを最小限に抑える．
+    2. 安全なリソース管理：
+       with構文と組み合わせることで，処理の正常終了時・異常終了時を問わず，開いた全てのファイルが確実に閉じられることを保証し，メモリリークを防ぐ．
+    
+    # 使い方
+    with RasterManager(path_nighttime_light=...) as rm:
+        rm.get_dsm_dataset()などを呼び出す
+    # このブロックを抜けた瞬間に、rmが管理していた全てのファイルが自動で閉じられる。
+    """
     def __init__(self, path_nighttime_light: str):
         self.cache = {} # このインスタンス内だけのキャッシュ
         self.open_datasets = [] # 開いたデータセットを記録
@@ -18,7 +33,7 @@ class RasterManager:
             self.open_datasets.append(self.nighttime_light_dataset) # 閉じるために記録
         except rasterio.errors.RasterioIOError:
             print(f"ERROR: Nighttime light file not found at {path_nighttime_light}.")
-            self.nightlight_dataset = None
+            self.nighttime_light_dataset = None
     
     # with構文が始まった時に呼ばれる
     def __enter__(self):
@@ -42,6 +57,9 @@ class RasterManager:
         self.cache[tertiary_meshcode] = dataset
         self.open_datasets.append(dataset) # 閉じるために記録
         return dataset
+    
+    def get_nighttime_light_dataset(self):
+        return self.nighttime_light_dataset # 初期化時に開いた夜間光データセット
 
 def get_meshcode_by_coord(lat, lon, n):
     """
