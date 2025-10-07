@@ -1,3 +1,5 @@
+# このコードの中身は，visibility.pyに統合しました．
+
 import rasterio
 
 def sample_raster_by_coord(dataset, lat: float, lon: float, band: int | None = None):
