@@ -1,7 +1,7 @@
 from skyfield.api import Topos, load
 import numpy as np
 import pandas as pd
-import pprint
+import matplotlib.pyplot as plt
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -28,6 +28,9 @@ def calc_circular_std(rads: list) -> float:
     # 円周標準偏差
     circular_std_rad = np.sqrt(-2 * np.log(r_bar))
     return circular_std_rad
+
+def find_potential_trains(launch_groups: dict, circular_std_threshold_rad: float) -> list:
+    pass
 
 # 1. 衛星名に対するインスタンスの辞書を作成
 path_sup_gp_txt = "./PoC/Skyfield/sup-gp_starlink_20251008.txt"
@@ -62,4 +65,22 @@ for launch_group in df['INTERNATIONAL_DESIGNATOR'].unique():
     
     launch_groups[launch_group] = instances
 
-pprint.pprint(launch_groups)
+group_names = []
+circular_stds = []
+
+print("打ち上げグループ: 平均近点角の円周標準偏差（ラジアン）")
+for group_name, instances in launch_groups.items():
+    # グループ内の全衛星から平均近点角（ラジアン）を抽出
+    mean_anomalies_rad = [instance.model.mo for instance in instances]
+
+    group_names.append(group_name)
+    circular_stds.append(calc_circular_std(rads=mean_anomalies_rad))
+
+plt.figure(figsize=(10, 6))
+plt.plot(group_names, circular_stds, color='skyblue')
+plt.xlabel("Launch Group")
+plt.ylabel("Circular Standard Deviation [rad]")
+plt.title("Circular Std of Mean Anomalies by Launch Group")
+plt.xticks(rotation=45, ha='right')  # ラベルを見やすく回転
+plt.tight_layout()
+plt.show()
