@@ -155,15 +155,16 @@ for input_folder in tqdm(input_folders):
             dem = xmlDem()
             dem.read_xml(file_path=xml_file)
 
-            primary = str(os.path.splitext(xml_file)[0][-25:-21])
-            secondary = str(os.path.splitext(xml_file)[0][-20:-18])
-            # tertiary = str(os.path.splitext(xml_file)[0][-17:-15])
+            first = str(os.path.splitext(xml_file)[0][-25:-21])
+            second = str(os.path.splitext(xml_file)[0][-20:-18])
+            third = str(os.path.splitext(xml_file)[0][-17:-15])
 
-            dir_path = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{primary}/{primary}-{secondary}"
+            dir_path = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}"
             if not os.path.exists(dir_path):
                 os.mkdir(dir_path)
 
-            output_name = f"{dir_path}/{os.path.splitext(xml_file)[0][-32:]}.tif"
+            # output_name = f"{dir_path}/{os.path.splitext(xml_file)[0][-32:]}.tif"
+            output_name = f"{dir_path}/{first}-{second}-{third}.tif"
             dem.to_geotiff(output_name)
 
             del dem
