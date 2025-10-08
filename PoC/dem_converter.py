@@ -7,6 +7,7 @@ import glob
 import os
 import gc
 from tqdm import tqdm
+import re
 
 class xmlDem:
     def __init__(self) -> None:
@@ -155,13 +156,15 @@ for input_folder in tqdm(input_folders):
             dem = xmlDem()
             dem.read_xml(file_path=xml_file)
 
-            first = str(os.path.splitext(xml_file)[0][-25:-21])
-            second = str(os.path.splitext(xml_file)[0][-20:-18])
-            third = str(os.path.splitext(xml_file)[0][-17:-15])
+            # 正規表現で4桁-2桁-2桁をキャプチャグループとして抽出
+            match = re.search(r'(\d{4})-(\d{2})-(\d{2})', str(xml_file))
+
+            first = match.group(1)
+            second = match.group(2)
+            third = match.group(3)
 
             dir_path = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}"
-            if not os.path.exists(dir_path):
-                os.mkdir(dir_path)
+            os.makedirs(dir_path, exist_ok=True) # exist_ok=True で既に存在してもエラーにならない．
 
             # output_name = f"{dir_path}/{os.path.splitext(xml_file)[0][-32:]}.tif"
             output_name = f"{dir_path}/{first}-{second}-{third}.tif"
