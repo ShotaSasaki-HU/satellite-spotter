@@ -66,4 +66,4 @@ def calc_rain_cloud_visibility_score(lat: float, lon: float) -> tuple[float, flo
     return rain_score, cloud_score, visibility_score
 
 lat, lon = 34.40875966610568, 132.72206522616142
-print(calc_cloud_visibility_score(lat=lat, lon=lon))
+print(calc_rain_cloud_visibility_score(lat=lat, lon=lon))
