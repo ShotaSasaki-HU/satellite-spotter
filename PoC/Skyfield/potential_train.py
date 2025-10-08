@@ -72,6 +72,11 @@ def find_potential_trains(
     potential_trains = {}
 
     for group_name, instances in group_to_instances.items():
+        # 手動フィルタ（仲間がリエントリーするなどして円周標準偏差が小さいと判明しているグループ）
+        ng_list = ['2021-059', '2024-065']
+        if group_name in ng_list:
+            continue
+
         # 打ち上げ年フィルタ
         launch_year = int(group_name.split('-')[0])
         current_year = datetime.now().year
