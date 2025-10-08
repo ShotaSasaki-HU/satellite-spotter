@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 # 実際にこのロジックを使用する場合は「責務の分離」に留意すること．
-def calc_cloud_visibility_score(lat: float, lon: float) -> tuple[float, float, float]:
+def calc_rain_cloud_visibility_score(lat: float, lon: float) -> tuple[float, float, float]:
     """
     Open-Meteo APIから天気情報を取得し，雨スコア・雲量スコア・視程スコアを計算する．
 
