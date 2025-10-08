@@ -67,7 +67,6 @@ def calc_circular_std(rads: list) -> float:
 def find_potential_trains(
         group_to_instances: dict,
         circular_std_threshold: float = 1.0,
-        max_age_days: int = 90 # 打ち上げからN日以内のグループのみを対象
     ) -> dict:
     """TLEからトレイン状態にある可能性が高いグループを特定する．"""
     potential_trains = {}
