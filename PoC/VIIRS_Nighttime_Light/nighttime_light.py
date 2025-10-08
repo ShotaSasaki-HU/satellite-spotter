@@ -1,4 +1,4 @@
-# このコードの中身は，visibility.pyに統合しました．
+# このコードの中身は，horizon_profile_nighttime_light.pyに統合しました．
 
 import rasterio
 
