@@ -82,7 +82,7 @@ def get_dsm_filepath(tertiary_meshcode):
     first = tertiary_meshcode[0:4]
     second = tertiary_meshcode[4:6]
     third = tertiary_meshcode[6:]
-    path_dsm_tiff = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}/FG-GML-{first}-{second}-{third}-DEM1A-20250502.tif"
+    path_dsm_tiff = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
 
     if not os.path.exists(path_dsm_tiff):
         return None
