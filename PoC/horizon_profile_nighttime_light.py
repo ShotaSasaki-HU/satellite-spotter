@@ -278,14 +278,15 @@ if __name__ == "__main__":
         horizon_profile, azimuths = calc_horizon_profile_parallel(
             observer_lat=lat,
             observer_lon=lon,
-            num_directions=120, # 120 -> 180 とするだけで2秒弱伸びる．
+            num_directions=360, # 120 -> 180 とするだけで2秒弱伸びる．
             max_distance=100000, # 50km -> 100km としても実行時間が変わらない．
             num_samples=100 # 100 -> 150 とするだけで2秒弱伸びる．
         )
     
     # number回実行 × 1セットで計測
-    t = timeit.timeit("run_calc()", setup="from __main__ import run_calc", number=5)
-    print(f"平均実行時間: {t/5:.3f} 秒")
+    N = 1
+    t = timeit.timeit("run_calc()", setup="from __main__ import run_calc", number=N)
+    print(f"平均実行時間: {t/N:.3f} 秒")
 
     """
     lat, lon = 34.259920336746845, 132.68432367066072
