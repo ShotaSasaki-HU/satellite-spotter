@@ -46,7 +46,7 @@ def get_elevations_by_coords(coords: list[dict]) -> np.ndarray:
         coords_by_meshcode[meshcode].append((coord['lon'], coord['lat'], i))
     
     # メッシュごとに標高データを取得
-    elevations = np.full(len(coords), np.nan, dtype=float) # 結果を格納するリスト
+    elevations = np.full(len(coords), 0.0, dtype=float) # 結果を格納するリスト
     for meshcode, coords_with_indices in coords_by_meshcode.items():
         path_dsm = get_dsm_filepath(tertiary_meshcode=meshcode)
         if path_dsm is None: # TIFFファイルが存在しなければ開く処理に進まない．
@@ -272,6 +272,7 @@ def calc_sky_glow_score(
 # マルチプロセスを使う場合，メインの処理は必ず if __name__ == "__main__": の中に書く．
 # 子プロセスが，孫プロセスを生成するのを防ぐため．
 if __name__ == "__main__":
+    """
     def run_calc():
         lat, lon = 34.259920336746845, 132.68432367066072
     
@@ -287,14 +288,14 @@ if __name__ == "__main__":
     N = 1
     t = timeit.timeit("run_calc()", setup="from __main__ import run_calc", number=N)
     print(f"平均実行時間: {t/N:.3f} 秒")
-
     """
-    lat, lon = 34.259920336746845, 132.68432367066072
+    
+    lat, lon = 34.32710837634732, 132.91470508842457
 
     horizon_profile, azimuths = calc_horizon_profile_parallel(
         observer_lat=lat,
         observer_lon=lon,
-        num_directions=120, # 120 -> 180 とするだけで2秒弱伸びる．
+        num_directions=360, # 120 -> 180 とするだけで2秒弱伸びる．
         max_distance=100000, # 50km -> 100km としても実行時間が変わらない．
         num_samples=100 # 100 -> 150 とするだけで2秒弱伸びる．
     )
@@ -308,7 +309,6 @@ if __name__ == "__main__":
     plt.grid(True)
     plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
     plt.show()
-    """
 
     """
     path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
