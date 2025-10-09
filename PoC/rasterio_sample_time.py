@@ -9,7 +9,7 @@ lat, lon = 34.4223, 132.7441
 
 coords = []
 for _ in range(10000):
-    coords.append((lat + (random.random() / 100), lon + (random.random() / 100)))
+    coords.append((lon + (random.random() / 100), lat + (random.random() / 100))) # lon, latの順番に注意！
 
 def sample_1coord_100times():
     for coord in coords:
