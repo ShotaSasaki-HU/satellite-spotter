@@ -7,67 +7,9 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 import timeit
 
-class RasterManager:
-    """
-    ラスターデータ（GeoTIFF）の効率的な読み込みと，安全なリソース管理を行うためのコンテキストマネージャクラス．
-
-    # 目的
-    1. パフォーマンス向上：
-       1回の処理（例：稜線計算）の中で同じGeoTIFFファイルを何度も開くのを防ぐ．
-       一度開いたファイルはインスタンス内のキャッシュに保持し，ディスクI/Oを最小限に抑える．
-    2. 安全なリソース管理：
-       with構文と組み合わせることで，処理の正常終了時・異常終了時を問わず，開いた全てのファイルが確実に閉じられることを保証し，メモリリークを防ぐ．
-    
-    # 使い方
-    with RasterManager(path_nighttime_light=...) as rm:
-        rm.get_dsm_dataset()などを呼び出す
-    # このブロックを抜けた瞬間に、rmが管理していた全てのファイルが自動で閉じられる。
-    """
-    def __init__(self, path_nighttime_light: str = None):
-        self.cache = {} # このインスタンス内だけのキャッシュ
-        self.open_datasets = [] # 開いたデータセットを記録
-        self.nighttime_light_dataset = None # 夜間光データセット用の属性
-
-        if path_nighttime_light:
-            try:
-                self.nighttime_light_dataset = rasterio.open(path_nighttime_light)
-                self.open_datasets.append(self.nighttime_light_dataset) # 閉じるために記録
-            except rasterio.errors.RasterioIOError:
-                print(f"ERROR: Nighttime light file not found at {path_nighttime_light}.")
-                self.nighttime_light_dataset = None
-    
-    # with構文が始まった時に呼ばれる
-    def __enter__(self):
-        return self
-    
-    # with構文が終わった時に呼ばれる
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        for dataset in self.open_datasets:
-            dataset.close()
-    
-    def get_dsm_dataset(self, tertiary_meshcode: str):
-        # キャッシュを確認
-        if tertiary_meshcode in self.cache:
-            return self.cache[tertiary_meshcode]
-        
-        path_dsm_tiff = get_dsm_filepath(tertiary_meshcode)
-        if path_dsm_tiff is None:
-            return None
-        
-        dataset = rasterio.open(path_dsm_tiff)
-        self.cache[tertiary_meshcode] = dataset
-        self.open_datasets.append(dataset) # 閉じるために記録
-        return dataset
-    
-    def get_nighttime_light_dataset(self):
-        return self.nighttime_light_dataset # 初期化時に開いた夜間光データセット
-
 def get_meshcode_by_coord(lat, lon, n):
     """
     緯度・経度に対応するn次メッシュを返す．
-    ・1次メッシュ：約80km四方
-    ・2次メッシュ：約10km四方
-    ・3次メッシュ：約1km四方
     """
     return ju.to_meshcode(lat, lon, n)
 
@@ -90,43 +32,37 @@ def get_dsm_filepath(tertiary_meshcode):
     else:
         return path_dsm_tiff
 
-def sample_raster_by_coord(dataset, lat: float, lon: float, band: int | None = None):
+def get_elevations_by_coords(coords: list[dict]) -> list[float]:
     """
-    ラスターデータから座標に対応する値を返す．
-
-    Args:
-        band: 指定した場合はそのバンドのみ（1始まり）．Noneなら全バンドのnumpy配列を返す．
+    緯度経度リストに対応するGeoTIFFファイルを見つけて標高値リストを返す．
     """
-    # .sample()はジェネレータを返すため，next()で最初の（そして唯一の）結果を取り出す．
-    # その結果はNumPy配列なので，[0]で中の数値を取り出す．
-    # dataset.sample()には [(経度, 緯度)] の順で座標を渡すことに注意！
-    values = next(dataset.sample([(lon, lat)]))
-    if band is not None:
-        return values[band - 1] # rasterioは1始まり
-    return values
-
-def get_elevation_by_coord(lat: float, lon: float, raster_manager: RasterManager) -> float:
-    """
-    任意の緯度経度に対応するGeoTIFFファイルを見つけて標高値を返す．
-    """
-    # 緯度経度から3次メッシュコードを計算
-    tertiary_meshcode = get_meshcode_by_coord(lat, lon, n=3)
-    if not tertiary_meshcode:
-        return np.nan
+    # 座標を所属するメッシュコードごとに分類（sampleメソッドの呼び出し回数を減らすため．）
+    coords_by_meshcode = {}
+    for i, coord in enumerate(coords, start=0):
+        meshcode = get_meshcode_by_coord(lat=coord['lat'], lon=coord['lon'], n=3)
+        if meshcode not in coords_by_meshcode:
+            coords_by_meshcode[meshcode] = []
+        # (lon, lat, 元のインデックス)のタプルで保存
+        coords_by_meshcode[meshcode].append((coord['lon'], coord['lat'], i))
     
-    # RasterManager経由で3次メッシュコードに対応するデータセットを取得
-    dataset = raster_manager.get_dsm_dataset(tertiary_meshcode)    
-    if dataset is None:
-        # print(f"DEBUG: DSM file for meshcode {tertiary_meshcode} not found.")
-        return np.nan
+    # メッシュごとに標高データを取得
+    elevations = np.full(len(coords), np.nan, dtype=float) # 結果を格納するリスト
+    for meshcode, coords_with_indices in coords_by_meshcode.items():
+        path_dsm = get_dsm_filepath(tertiary_meshcode=meshcode)
+        if path_dsm is None: # TIFFファイルが存在しなければ開く処理に進まない．
+            continue
+
+        with rasterio.open(path_dsm) as src:
+            # このファイルに属する座標だけをまとめてsampleに渡す．
+            coords_to_sample = [(lon, lat) for lon, lat, idx in coords_with_indices]
+            results = list(src.sample(coords_to_sample))
+        
+        # 結果を元のインデックスの位置に格納
+        for i, result in enumerate(results, start=0):
+            original_index = coords_with_indices[i][2]
+            elevations[original_index] = result[0]
     
-    # 指定した座標の標高値を取得
-    try:
-        elevation = sample_raster_by_coord(dataset, lat=lat, lon=lon, band=1)
-        if elevation < -9000: return np.nan # 一応安全のため
-        return elevation
-    except IndexError:
-        return np.nan
+    return elevations
 
 def calc_hidden_height(observer_height: float, target_distance: float) -> float:
     """
@@ -181,35 +117,34 @@ def calc_max_angle_for_single_azimuth(args):
     # 引数を展開
     azimuth, observer_lat, observer_lon, observer_height, distances = args
 
+    geod = pyproj.Geod(ellps='WGS84')
+
+    lons, lats, back_azimuth = geod.fwd(
+        np.full_like(distances, observer_lon),
+        np.full_like(distances, observer_lat),
+        np.full_like(distances, azimuth),
+        distances
+    )
+
+    coords = [{'lat': lat, 'lon': lon} for lat, lon in zip(lats, lons)]
+    elevations = get_elevations_by_coords(coords=coords)
+
+    # 標高値リストの要素それぞれについて仰俯角を計算
     max_angle = -90.0
+    for i, dist in enumerate(distances):
+        target_height = elevations[i]
+        if np.isnan(target_height):
+            continue
 
-    # 各ワーカーは，自分専用のRasterManagerを持つ．
-    with RasterManager() as rm:
-        geod = pyproj.Geod(ellps='WGS84')
-
-        lons, lats, back_azimuth = geod.fwd(
-            np.full_like(distances, observer_lon),
-            np.full_like(distances, observer_lat),
-            np.full_like(distances, azimuth),
-            distances
+        current_angle = calc_viewing_angle(
+            observer_height=observer_height,
+            target_height=target_height,
+            distance=dist
         )
 
-        for i, dist in enumerate(distances):
-            target_lat, target_lon = lats[i], lons[i]
-            target_height = get_elevation_by_coord(lat=target_lat, lon=target_lon, raster_manager=rm)
-            if np.isnan(target_height):
-                continue # 標高データが無ければスキップ
-
-            # 観測者から見た，このサンプリング点の仰俯角を計算
-            current_angle = calc_viewing_angle(
-                observer_height=observer_height,
-                target_height=target_height,
-                distance=dist
-            )
-
-            # これまでに見つかった最大仰俯角より大きければ更新
-            if current_angle > max_angle:
-                max_angle = current_angle
+        # これまでに見つかった最大仰俯角より大きければ更新
+        if current_angle > max_angle:
+            max_angle = current_angle
 
     return max_angle # この方位での最大仰角を返す
 
@@ -236,8 +171,7 @@ def calc_horizon_profile_parallel(
         (np.ndarray): 各方位における最大仰角（稜線の仰角）を格納した配列
     """
     # 観測者の準備
-    with RasterManager() as rm:
-        observer_ground_elev = get_elevation_by_coord(lat=observer_lat, lon=observer_lon, raster_manager=rm)
+    observer_ground_elev = get_elevations_by_coords(coords=[{'lat': observer_lat, 'lon': observer_lon}])[0]
     if np.isnan(observer_ground_elev):
         raise ValueError("観測地点の標高が取得できませんでした．")
     observer_height = observer_ground_elev + observer_eye_height
@@ -261,7 +195,7 @@ def calc_horizon_profile_parallel(
     return np.array(horizon_profile), azimuths
 
 def calc_sky_glow_score(
-        raster_manager: RasterManager,
+        path_nighttime_light: str,
         observer_lat: float,
         observer_lon: float,
         search_width: float = 100000.0, # 走査範囲の一辺の長さ（m）
@@ -271,11 +205,6 @@ def calc_sky_glow_score(
     観測地点を中心とした格子状の領域を走査し，スカイグロウ（光害）のスコアを計算する．
     スコアは各光源の「( 放射輝度 / 距離^2 ) * 面積」の総和となる．
     """
-    nighttime_light_dataset = raster_manager.get_nighttime_light_dataset()
-    if nighttime_light_dataset is None:
-        print("ERROR: Nighttime light dataset not available.")
-        return 0.0
-
     # 格子の準備
     geod = pyproj.Geod(ellps='WGS84') # WGS84測地系に基づく測地線計算オブジェクト
     num_cells_per_side = int(search_width / resolution)
@@ -291,15 +220,17 @@ def calc_sky_glow_score(
         endpoint=True
     )
 
-    sky_glow_score_sum = 0.0 # スカイグロウスコアの合計
-    cell_area = resolution ** 2 # 1格子あたりの面積
+    # 放射輝度を取得するための座標リスト
+    coords_to_sample = []
+    # 各格子点の距離を保持するリスト
+    distances = [] 
 
-    # 全ての格子点を走査
+    # 全ての格子点を走査して2つのリストを作成
     for y_offset in offsets:
         for x_offset in offsets:
             # 格子中心までの距離と方位を計算
             dist = np.sqrt(x_offset**2 + y_offset**2)
-            
+
             # 中央の格子を特別に扱う．
             is_center_cell = (dist == 0)
             if is_center_cell:
@@ -314,14 +245,22 @@ def calc_sky_glow_score(
             else:
                 # 観測者からオフセット分離れた格子中心の緯度経度を計算
                 lon, lat, back_azimuth = geod.fwd(observer_lon, observer_lat, azimuth, dist)
+            
+            coords_to_sample.append((lon, lat)) # rasterioのsampleメソッドには，座標をlon, latの順で渡す事に注意！
+            distances.append(dist)
 
-            # その地点の放射輝度
-            radiance = sample_raster_by_coord(
-                dataset=nighttime_light_dataset,
-                lat=lat,
-                lon=lon,
-                band=1
-            )
+    # 光害スコアの計算
+    with rasterio.open(path_nighttime_light) as src:
+        if src is None:
+            print("ERROR: Nighttime light dataset not available.")
+            return 0.0
+        
+        sky_glow_score_sum = 0.0 # スカイグロウスコアの合計
+        cell_area = resolution ** 2 # 1格子あたりの面積
+
+        radiance_results = list(src.sample(coords_to_sample))
+        radiances = [result[0] for result in radiance_results] # 放射輝度リスト
+        for radiance, dist in zip(radiances, distances):
             if radiance is None or np.isnan(radiance) or radiance < 0:
                 radiance = 0.0
             
@@ -349,6 +288,16 @@ if __name__ == "__main__":
     print(f"平均実行時間: {t/5:.3f} 秒")
 
     """
+    lat, lon = 34.259920336746845, 132.68432367066072
+
+    horizon_profile, azimuths = calc_horizon_profile_parallel(
+        observer_lat=lat,
+        observer_lon=lon,
+        num_directions=120, # 120 -> 180 とするだけで2秒弱伸びる．
+        max_distance=100000, # 50km -> 100km としても実行時間が変わらない．
+        num_samples=100 # 100 -> 150 とするだけで2秒弱伸びる．
+    )
+
     plt.figure(figsize=(15,2))
     plt.plot(azimuths, horizon_profile)
     plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
@@ -360,20 +309,16 @@ if __name__ == "__main__":
     plt.show()
     """
 
-    """
     path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
 
-    # with構文を抜けると，RasterManagerが自動で全てのファイルを閉じる．
-    with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
-        lat, lon = 35.689432879394246, 139.7005268317204
-        print("新宿駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+    lat, lon = 35.689432879394246, 139.7005268317204
+    print("新宿駅:", calc_sky_glow_score(path_nighttime_light=path_viirs_tiff, observer_lat=lat, observer_lon=lon))
 
-        lat, lon = 34.39797522303602, 132.47547768776775
-        print("広島駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+    lat, lon = 34.39797522303602, 132.47547768776775
+    print("広島駅:", calc_sky_glow_score(path_nighttime_light=path_viirs_tiff, observer_lat=lat, observer_lon=lon))
 
-        lat, lon = 34.402651216585774, 132.71277160961336
-        print("東広島市:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+    lat, lon = 34.402651216585774, 132.71277160961336
+    print("東広島市:", calc_sky_glow_score(path_nighttime_light=path_viirs_tiff, observer_lat=lat, observer_lon=lon))
 
-        lat, lon = 29.246693399224306, 139.18016354401132
-        print("太平洋:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
-    """
+    lat, lon = 29.246693399224306, 139.18016354401132
+    print("太平洋:", calc_sky_glow_score(path_nighttime_light=path_viirs_tiff, observer_lat=lat, observer_lon=lon))
