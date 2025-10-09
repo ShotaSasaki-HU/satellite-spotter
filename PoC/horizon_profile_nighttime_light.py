@@ -4,7 +4,8 @@ import rasterio
 import numpy as np
 import pyproj
 import matplotlib.pyplot as plt
-# from numba import jit
+import multiprocessing as mp
+from multiprocessing import Pool, cpu_count
 
 class RasterManager:
     """
@@ -173,61 +174,29 @@ def calc_viewing_angle(observer_height: float, target_height: float, distance: f
 
     return np.degrees(angle_rad)
 
-def calc_horizon_profile(
-        raster_manager: RasterManager,
-        observer_lat: float,
-        observer_lon: float,
-        observer_eye_height: float = 1.5,
-        num_directions: int = 360,
-        max_distance: float = 150000.0,
-        num_samples: int = 150
-    ) -> np.ndarray:
+def calc_max_angle_for_single_azimuth(args):
     """
-    観測地点から360°の水平線・稜線プロファイルを計算する．
-
-    Args:
-        observer_lat (float): 観測者の緯度
-        observer_lon (float): 観測者の経度
-        observer_eye_height (float): 観測者の身長による視点の高さ（m）
-        num_directions (int): 走査する方位の数（解像度）
-        max_distance (float): 最大探索距離（m）
-        num_samples (int): 1方位あたりのサンプリング点数
-
-    Returns:
-        (np.ndarray): 各方位における最大仰角（稜線の仰角）を格納した配列
+    1方位分の稜線の最大仰角を計算する．（ワーカープロセスで実行）
     """
-    # 観測者の準備
-    observer_ground_elev = get_elevation_by_coord(lat=observer_lat, lon=observer_lon, raster_manager=raster_manager)
-    if np.isnan(observer_ground_elev):
-        raise ValueError("観測地点の標高が取得できませんでした．")
-    observer_height = observer_ground_elev + observer_eye_height
+    # 引数を展開
+    azimuth, observer_lat, observer_lon, observer_height, distances = args
 
-    # WGS84測地系に基づく測地線計算オブジェクト
-    geod = pyproj.Geod(ellps='WGS84')
+    max_angle = -90.0
 
-    azimuths = np.linspace(0, 360, num_directions, endpoint=False) # 各方位
-    distances = np.geomspace(1, max_distance, num_samples) # 各サンプリング点
+    # 各ワーカーは，自分専用のRasterManagerを持つ．
+    with RasterManager() as rm:
+        geod = pyproj.Geod(ellps='WGS84')
 
-    horizon_profile = np.zeros(num_directions) # 結果を格納する配列
-
-    # 全方位の走査
-    for i, azimuth in enumerate(azimuths):
-        max_angle = -90.0 # 現在の方位での最大仰俯角を記録
-
-        # 指定した方位と距離にある全サンプリング点の緯度経度を一度に計算
-        # https://qiita.com/Yoshiki443/items/0882a8dda916d6d424bb
         lons, lats, back_azimuth = geod.fwd(
-            np.full(num_samples, observer_lon),
-            np.full(num_samples, observer_lat),
-            np.full(num_samples, azimuth),
+            np.full_like(distances, observer_lon),
+            np.full_like(distances, observer_lat),
+            np.full_like(distances, azimuth),
             distances
         )
 
-        for j, dist in enumerate(distances):
-            target_lat, target_lon = lats[j], lons[j]
-
-            # サンプリング点の標高を取得
-            target_height = get_elevation_by_coord(lat=target_lat, lon=target_lon, raster_manager=raster_manager)
+        for i, dist in enumerate(distances):
+            target_lat, target_lon = lats[i], lons[i]
+            target_height = get_elevation_by_coord(lat=target_lat, lon=target_lon, raster_manager=rm)
             if np.isnan(target_height):
                 continue # 標高データが無ければスキップ
 
@@ -241,15 +210,55 @@ def calc_horizon_profile(
             # これまでに見つかった最大仰俯角より大きければ更新
             if current_angle > max_angle:
                 max_angle = current_angle
-        
-        # この方位角での最大仰俯角を記録
-        horizon_profile[i] = max_angle
 
-        # 進捗表示
-        if (i + 1) % 30 == 0:
-            print(f"進捗: {i+1}/{num_directions}方位完了...")
+    return max_angle # この方位での最大仰角を返す
+
+def calc_horizon_profile_parallel(
+        observer_lat: float,
+        observer_lon: float,
+        observer_eye_height: float = 1.55,
+        num_directions: int = 360,
+        max_distance: float = 150000.0,
+        num_samples: int = 150
+    ) -> np.ndarray:
+    """
+    観測地点から360°の水地平線・稜線プロファイルを計算する．
+
+    Args:
+        observer_lat (float): 観測者の緯度
+        observer_lon (float): 観測者の経度
+        observer_eye_height (float): 観測者の身長による視点の高さ（m）
+        num_directions (int): 走査する方位の数（解像度）
+        max_distance (float): 最大探索距離（m）
+        num_samples (int): 1方位あたりのサンプリング点数
+
+    Returns:
+        (np.ndarray): 各方位における最大仰角（稜線の仰角）を格納した配列
+    """
+    # 観測者の準備
+    with RasterManager() as rm:
+        observer_ground_elev = get_elevation_by_coord(lat=observer_lat, lon=observer_lon, raster_manager=rm)
+    if np.isnan(observer_ground_elev):
+        raise ValueError("観測地点の標高が取得できませんでした．")
+    observer_height = observer_ground_elev + observer_eye_height
+
+    # 計算パラメータの準備
+    azimuths = np.linspace(0, 360, num_directions, endpoint=False) # 各方位
+    distances = np.geomspace(1, max_distance, num_samples) # 各サンプリング点
+
+    # 各ワーカーに渡す引数（タプル）のリストを作成
+    tasks = [(az, observer_lat, observer_lon, observer_height, distances) for az in azimuths]
+
+    # プロセスのプールを作成（CPUコア数を自動で取得）
+    # macOSの場合，'fork'だと問題が起きることがあるため'spawn'が推奨されるらしい．
+    ctx = mp.get_context('spawn')
+
+    with ctx.Pool(processes=cpu_count()) as pool:
+        print(f"{cpu_count()}個のプロセスで並列処理を実行します．")
+        # pool.mapを使ってタスクを分配
+        horizon_profile = pool.map(calc_max_angle_for_single_azimuth, tasks)
     
-    return horizon_profile, azimuths
+    return np.array(horizon_profile), azimuths
 
 def calc_sky_glow_score(
         raster_manager: RasterManager,
@@ -321,13 +330,12 @@ def calc_sky_glow_score(
 
     return sky_glow_score_sum
 
-lat, lon = 34.259920336746845, 132.68432367066072
+# マルチプロセスを使う場合，メインの処理は必ず if __name__ == "__main__": の中に書く．
+# 子プロセスが，孫プロセスを生成するのを防ぐため．
+if __name__ == "__main__":
+    lat, lon = 34.259920336746845, 132.68432367066072
 
-# with構文を抜けると，RasterManagerが自動で全てのファイルを閉じる．
-with RasterManager() as rm:
-    print(rm.get_nighttime_light_dataset)
-    horizon_profile, azimuths = calc_horizon_profile(
-        raster_manager=rm,
+    horizon_profile, azimuths = calc_horizon_profile_parallel(
         observer_lat=lat,
         observer_lon=lon,
         num_directions=120,
@@ -335,27 +343,30 @@ with RasterManager() as rm:
         num_samples=100
     )
 
-plt.figure(figsize=(15,2))
-plt.plot(azimuths, horizon_profile)
-plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
-plt.xlabel("Azimuth (degrees from North)")
-plt.ylabel("Elevation Angle (degrees)")
-plt.xticks(np.arange(0, 361, 45), ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
-plt.grid(True)
-plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
-plt.show()
+    plt.figure(figsize=(15,2))
+    plt.plot(azimuths, horizon_profile)
+    plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
+    plt.xlabel("Azimuth (degrees from North)")
+    plt.ylabel("Elevation Angle (degrees)")
+    plt.xticks(np.arange(0, 361, 45), ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
+    plt.grid(True)
+    plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
+    plt.show()
 
-path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
+    """
+    path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
 
-with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
-    lat, lon = 35.689432879394246, 139.7005268317204
-    print("新宿駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+    # with構文を抜けると，RasterManagerが自動で全てのファイルを閉じる．
+    with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
+        lat, lon = 35.689432879394246, 139.7005268317204
+        print("新宿駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
 
-    lat, lon = 34.39797522303602, 132.47547768776775
-    print("広島駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+        lat, lon = 34.39797522303602, 132.47547768776775
+        print("広島駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
 
-    lat, lon = 34.402651216585774, 132.71277160961336
-    print("東広島市:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+        lat, lon = 34.402651216585774, 132.71277160961336
+        print("東広島市:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
 
-    lat, lon = 29.246693399224306, 139.18016354401132
-    print("太平洋:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+        lat, lon = 29.246693399224306, 139.18016354401132
+        print("太平洋:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
+    """
