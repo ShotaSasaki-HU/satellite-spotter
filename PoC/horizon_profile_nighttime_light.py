@@ -339,9 +339,9 @@ if __name__ == "__main__":
         horizon_profile, azimuths = calc_horizon_profile_parallel(
             observer_lat=lat,
             observer_lon=lon,
-            num_directions=120,
-            max_distance=50000,
-            num_samples=100
+            num_directions=120, # 120 -> 180 とするだけで2秒弱伸びる．
+            max_distance=100000, # 50km -> 100km としても実行時間が変わらない．
+            num_samples=100 # 100 -> 150 とするだけで2秒弱伸びる．
         )
     
     # 5回実行 × 1セットで計測
