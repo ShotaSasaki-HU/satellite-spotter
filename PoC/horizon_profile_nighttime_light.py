@@ -4,8 +4,7 @@ import rasterio
 import numpy as np
 import pyproj
 import matplotlib.pyplot as plt
-
-EARTH_R = 6371000.0 # 地球の半径（m）
+# from numba import jit
 
 class RasterManager:
     """
@@ -23,17 +22,18 @@ class RasterManager:
         rm.get_dsm_dataset()などを呼び出す
     # このブロックを抜けた瞬間に、rmが管理していた全てのファイルが自動で閉じられる。
     """
-    def __init__(self, path_nighttime_light: str):
+    def __init__(self, path_nighttime_light: str = None):
         self.cache = {} # このインスタンス内だけのキャッシュ
         self.open_datasets = [] # 開いたデータセットを記録
+        self.nighttime_light_dataset = None # 夜間光データセット用の属性
 
-        # 初期化時に夜間光データを開いて属性として保持
-        try:
-            self.nighttime_light_dataset = rasterio.open(path_nighttime_light)
-            self.open_datasets.append(self.nighttime_light_dataset) # 閉じるために記録
-        except rasterio.errors.RasterioIOError:
-            print(f"ERROR: Nighttime light file not found at {path_nighttime_light}.")
-            self.nighttime_light_dataset = None
+        if path_nighttime_light:
+            try:
+                self.nighttime_light_dataset = rasterio.open(path_nighttime_light)
+                self.open_datasets.append(self.nighttime_light_dataset) # 閉じるために記録
+            except rasterio.errors.RasterioIOError:
+                print(f"ERROR: Nighttime light file not found at {path_nighttime_light}.")
+                self.nighttime_light_dataset = None
     
     # with構文が始まった時に呼ばれる
     def __enter__(self):
@@ -138,6 +138,8 @@ def calc_hidden_height(observer_height: float, target_distance: float) -> float:
     Returns:
         (float): 地球の丸みによって隠される高さ（m）
     """
+    EARTH_R = 6371000.0 # 地球の半径（m）
+
     # 観測者の視点から水平線までの距離（厳密式）
     dist_to_horizon = np.sqrt((2 * EARTH_R * observer_height) + (observer_height ** 2))
 
@@ -319,22 +321,33 @@ def calc_sky_glow_score(
 
     return sky_glow_score_sum
 
-lat, lon = 34.39737799177866, 132.475115789262
-
-path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
+lat, lon = 34.259920336746845, 132.68432367066072
 
 # with構文を抜けると，RasterManagerが自動で全てのファイルを閉じる．
-with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
-    """
+with RasterManager() as rm:
+    print(rm.get_nighttime_light_dataset)
     horizon_profile, azimuths = calc_horizon_profile(
         raster_manager=rm,
         observer_lat=lat,
         observer_lon=lon,
+        num_directions=120,
         max_distance=50000,
-        num_samples=50
+        num_samples=100
     )
-    """
 
+plt.figure(figsize=(15,2))
+plt.plot(azimuths, horizon_profile)
+plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
+plt.xlabel("Azimuth (degrees from North)")
+plt.ylabel("Elevation Angle (degrees)")
+plt.xticks(np.arange(0, 361, 45), ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
+plt.grid(True)
+plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
+plt.show()
+
+path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
+
+with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
     lat, lon = 35.689432879394246, 139.7005268317204
     print("新宿駅:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
 
@@ -346,15 +359,3 @@ with RasterManager(path_nighttime_light=path_viirs_tiff) as rm:
 
     lat, lon = 29.246693399224306, 139.18016354401132
     print("太平洋:", calc_sky_glow_score(raster_manager=rm, observer_lat=lat, observer_lon=lon))
-
-"""
-plt.figure(figsize=(15,2))
-plt.plot(azimuths, horizon_profile)
-plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
-plt.xlabel("Azimuth (degrees from North)")
-plt.ylabel("Elevation Angle (degrees)")
-plt.xticks(np.arange(0, 361, 45), ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'])
-plt.grid(True)
-plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
-plt.show()
-"""
