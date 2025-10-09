@@ -32,7 +32,7 @@ def get_dsm_filepath(tertiary_meshcode):
     else:
         return path_dsm_tiff
 
-def get_elevations_by_coords(coords: list[dict]) -> list[float]:
+def get_elevations_by_coords(coords: list[dict]) -> np.ndarray:
     """
     緯度経度リストに対応するGeoTIFFファイルを見つけて標高値リストを返す．
     """
@@ -283,7 +283,7 @@ if __name__ == "__main__":
             num_samples=100 # 100 -> 150 とするだけで2秒弱伸びる．
         )
     
-    # 5回実行 × 1セットで計測
+    # number回実行 × 1セットで計測
     t = timeit.timeit("run_calc()", setup="from __main__ import run_calc", number=5)
     print(f"平均実行時間: {t/5:.3f} 秒")
 
@@ -309,6 +309,7 @@ if __name__ == "__main__":
     plt.show()
     """
 
+    """
     path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
 
     lat, lon = 35.689432879394246, 139.7005268317204
@@ -322,3 +323,4 @@ if __name__ == "__main__":
 
     lat, lon = 29.246693399224306, 139.18016354401132
     print("太平洋:", calc_sky_glow_score(path_nighttime_light=path_viirs_tiff, observer_lat=lat, observer_lon=lon))
+    """
