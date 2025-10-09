@@ -5,7 +5,7 @@ import numpy as np
 import pyproj
 import matplotlib.pyplot as plt
 import multiprocessing as mp
-from multiprocessing import Pool, cpu_count
+import timeit
 
 class RasterManager:
     """
@@ -253,8 +253,8 @@ def calc_horizon_profile_parallel(
     # macOSの場合，'fork'だと問題が起きることがあるため'spawn'が推奨されるらしい．
     ctx = mp.get_context('spawn')
 
-    with ctx.Pool(processes=cpu_count()) as pool:
-        print(f"{cpu_count()}個のプロセスで並列処理を実行します．")
+    with ctx.Pool(processes=mp.cpu_count()) as pool:
+        print(f"{mp.cpu_count()}個のプロセスで並列処理を実行します．")
         # pool.mapを使ってタスクを分配
         horizon_profile = pool.map(calc_max_angle_for_single_azimuth, tasks)
     
@@ -333,16 +333,22 @@ def calc_sky_glow_score(
 # マルチプロセスを使う場合，メインの処理は必ず if __name__ == "__main__": の中に書く．
 # 子プロセスが，孫プロセスを生成するのを防ぐため．
 if __name__ == "__main__":
-    lat, lon = 34.259920336746845, 132.68432367066072
+    def run_calc():
+        lat, lon = 34.259920336746845, 132.68432367066072
+    
+        horizon_profile, azimuths = calc_horizon_profile_parallel(
+            observer_lat=lat,
+            observer_lon=lon,
+            num_directions=120,
+            max_distance=50000,
+            num_samples=100
+        )
+    
+    # 5回実行 × 1セットで計測
+    t = timeit.timeit("run_calc()", setup="from __main__ import run_calc", number=5)
+    print(f"平均実行時間: {t/5:.3f} 秒")
 
-    horizon_profile, azimuths = calc_horizon_profile_parallel(
-        observer_lat=lat,
-        observer_lon=lon,
-        num_directions=120,
-        max_distance=50000,
-        num_samples=100
-    )
-
+    """
     plt.figure(figsize=(15,2))
     plt.plot(azimuths, horizon_profile)
     plt.title(f"Horizon Profile at ({lat:.2f}, {lon:.2f})")
@@ -352,6 +358,7 @@ if __name__ == "__main__":
     plt.grid(True)
     plt.ylim(min(horizon_profile.min() - 1, -1), horizon_profile.max() + 5) # Y軸の範囲を調整
     plt.show()
+    """
 
     """
     path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
