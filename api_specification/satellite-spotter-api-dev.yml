@@ -177,10 +177,16 @@ paths: # エンドポイント
                               example: 0.8
                               minimum: 0.0
                               maximum: 1.0
-                            sat_type:
+                            event_type:
                               type: string
-                              description: 衛星のタイプ（ISS, Starlink Satellite Train, etc.）
-                              example: "ISS"
+                              description: 観測対象のタイプ（ISS, Starlink Satellite Train, etc.）
+                              example: "Starlink Satellite Train"
+                            international_designators:
+                              type: array
+                              items:
+                                type: string
+                                description: 詳細表示の際に衛星を一意に識別するための国際衛星識別符号
+                              example: ["2025-223A", "2025-223B", "2025-223C", "2025-223D", "2025-223E"]
         '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
@@ -223,7 +229,25 @@ paths: # エンドポイント
           description: スポットのID
           schema:
             type: string
-
+        - name: start_time
+          in: query
+          required: true
+          description: イベントの開始時刻（ISO 8601）
+          schema:
+            type: string
+            format: date-time
+            example: "2025-10-11T19:50:45+09:00"
+        - name: international_designators
+          in: query
+          required: true
+          description: 開始時間と終了時間の決定に必要となる注目している衛星の国際衛星識別符号
+          schema:
+            type: array
+            items:
+              type: string
+          style: form # URLのクエリ文字列形式で表現
+          explode: false # 複数値はカンマ区切り
+          example: ["2025-223A", "2025-223B", "2025-223C", "2025-223D", "2025-223E"]
       responses:
         '200':
           description: 成功時のレスポンス
