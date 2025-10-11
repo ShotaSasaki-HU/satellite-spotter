@@ -6,6 +6,88 @@ servers:
   - url: http://localhost:8000
     description: 開発用ローカルサーバー
 paths: # エンドポイント
+  /api/v1/municipalities/coordinates:
+    get:
+      summary: 市区町村の代表座標を検索する．
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 検索したい市区町村名
+          schema:
+            type: string
+        - name: lat
+          in: query
+          required: false
+          description: マップにおける視点の緯度（十進法度単位）
+          schema:
+            type: number
+            format: float
+            minimum: -90.0
+            maximum: 90.0
+        - name: lon
+          in: query
+          required: false
+          description: マップにおける視点の経度（十進法度単位）
+          schema:
+            type: number
+            format: float
+            minimum: -180.0
+            maximum: 180.0
+      responses:
+        '200':
+          description: 成功時のレスポンス（0件の場合は空の配列を返す．）
+          content:
+            application/json:
+              schema:
+                type: array # 使用するのは1件のみだが，検索結果は全て正確に提供する．
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: 市区町村の名称
+                      example: "広島県広島市中区"
+                    lat:
+                      type: number
+                      description: 緯度（十進法度単位）
+                      example: 34.391303
+                    lon:
+                      type: number
+                      description: 経度（十進法度単位）
+                      example: 132.45211
+        '400':
+          description: クエリパラメータが不正な場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "INVALID_PARAMETER"
+                      message:
+                        type: string
+                        example: "必須パラメータが欠落しています．"
+        '500':
+          description: サーバー内部で予期せぬエラーが発生した場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "INTERNAL_SERVER_ERROR"
+                      message:
+                        type: string
+                        example: "サーバー内部でエラーが発生しました．再度お試しください．"
   /api/v1/spots: # /apiで通常のページと区別する．/v1でバージョンを管理する．
     get: # データの取得
       summary: おすすめの観測スポットを検索する．
@@ -120,85 +202,32 @@ paths: # エンドポイント
                       message:
                         type: string
                         example: "サーバー内部でエラーが発生しました．再度お試しください．"
-  /api/v1/municipalities/coordinates:
+  /api/v1/spots/{spot_id}/events:
     get:
-      summary: 市区町村の代表座標を検索する．
+      summary: 特定のスポットで見られる観測イベントの詳細を取得する．
       parameters:
-        - name: q
-          in: query
+        - name: spot_id # URLに含まれるパスパラメータ．特定のリソースを指す時は，クエリパラメータではなくパスパラメータを使用．
+          in: path
           required: true
-          description: 検索したい市区町村名
+          description: スポットのID
           schema:
             type: string
-        - name: lat
-          in: query
-          required: false
-          description: マップにおける視点の緯度（十進法度単位）
-          schema:
-            type: number
-            format: float
-            minimum: -90.0
-            maximum: 90.0
-        - name: lon
-          in: query
-          required: false
-          description: マップにおける視点の経度（十進法度単位）
-          schema:
-            type: number
-            format: float
-            minimum: -180.0
-            maximum: 180.0
+
       responses:
         '200':
-          description: 成功時のレスポンス（0件の場合は空の配列を返す．）
-          content:
-            application/json:
-              schema:
-                type: array # 使用するのは1件のみだが，検索結果は全て正確に提供する．
-                items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      description: 市区町村の名称
-                      example: "広島県広島市中区"
-                    lat:
-                      type: number
-                      description: 緯度（十進法度単位）
-                      example: 34.391303
-                    lon:
-                      type: number
-                      description: 経度（十進法度単位）
-                      example: 132.45211
-        '400':
-          description: クエリパラメータが不正な場合
+          description: 成功時のレスポンス
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  error:
+                  spot:
                     type: object
                     properties:
-                      code:
+                      spot_id:
+                        type: integer
+                      name:
                         type: string
-                        example: "INVALID_PARAMETER"
-                      message:
-                        type: string
-                        example: "必須パラメータが欠落しています．"
-        '500':
-          description: サーバー内部で予期せぬエラーが発生した場合
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
+                  incoming_event:
                     type: object
-                    properties:
-                      code:
-                        type: string
-                        example: "INTERNAL_SERVER_ERROR"
-                      message:
-                        type: string
-                        example: "サーバー内部でエラーが発生しました．再度お試しください．"
+                    
