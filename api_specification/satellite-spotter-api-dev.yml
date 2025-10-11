@@ -144,32 +144,43 @@ paths: # エンドポイント
               schema:
                 type: object
                 properties:
+                  total:
+                    type: integer
+                    description: ヒットしたスポットの総数（ページネーション用）
+                    example: 42
                   spots:
                     type: array
                     items:
                       type: object
                       properties:
+                        spot_id: # 詳細表示に必要なID
+                          type: integer
+                          description: スポットを一意に識別するID
+                          example: 1910014046
                         name:
                           type: string
                         lat:
                           type: number
                         lon:
                           type: number
-                        scores:
-                          type: object # 項目数が固定なためarrayを使わない．objectでは，ラベルによるアクセスが容易．
+                        next_event:
+                          type: object
                           properties:
-                            visibility: # 最終的な可視性スコア
+                            start_time:
+                              type: string
+                              format: date-time
+                              description: イベントの開始時刻（ISO 8601）
+                              example: "2025-10-11T19:50:45+09:00"
+                            visibility:
                               type: number
-                            topography: # 地形スコア
-                              type: number
-                            sky_glow: # 光害スコア
-                              type: number
-                            rain: # 雨スコア
-                              type: number
-                            cloud: # 雲量スコア
-                              type: number
-                            met_visibility: # 気象学的な視程スコア
-                              type: number
+                              description: 最終的な可視性スコア
+                              example: 0.8
+                              minimum: 0.0
+                              maximum: 1.0
+                            sat_type:
+                              type: string
+                              description: 衛星のタイプ（ISS, Starlink Satellite Train, etc.）
+                              example: "ISS"
         '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
@@ -230,4 +241,14 @@ paths: # エンドポイント
                         type: string
                   incoming_event:
                     type: object
-                    
+
+#                            topography: # 地形スコア
+#                              type: number
+#                            sky_glow: # 光害スコア
+#                              type: number
+#                            rain: # 雨スコア
+#                              type: number
+#                            cloud: # 雲量スコア
+#                              type: number
+#                            met_visibility: # 気象学的な視程スコア
+#                              type: number
