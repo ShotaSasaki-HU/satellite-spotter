@@ -234,36 +234,32 @@ paths: # エンドポイント
                     description: イベントの終了時刻（ISO 8601）
                     example: "2025-10-11T19:55:45+09:00"
                   trajectories:
-                    type: object
-                    properties:
-                      timestamps:
-                        type: array
-                        items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timestamp:
                           type: string
                           format: date-time
-                        description: 共通時刻系列（ISO 8601）
-                        example: ["2025-10-11T19:50:45+09:00", "2025-10-11T19:51:45+09:00", "2025-10-11T19:52:45+09:00", "2025-10-11T19:53:45+09:00", "2025-10-11T19:54:45+09:00", "2025-10-11T19:55:45+09:00"]
-                      satellites:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            international_designators:
-                              type: string
-                              example: "2025-223A"
-                            trajectories:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  ra:
-                                    type: number
-                                    format: float
-                                    description: 赤経（度）
-                                  dec:
-                                    type: number
-                                    format: float
-                                    description: 赤緯（度）
+                          example: "2025-10-11T19:50:45+09:00"
+                        positions:
+                          type: array
+                          description: 当該時刻における全衛星の位置リスト
+                          items:
+                            type: object
+                            properties:
+                              international_designator:
+                                type: string
+                                example: "2025-223A"
+                                description: 国際衛星識別番号
+                              ra:
+                                type: number
+                                format: float
+                                description: 当該衛星の赤経（度）
+                              dec:
+                                type: number
+                                format: float
+                                description: 当該衛星の赤緯（度）
                   scores:
                     type: object
                     properties:
