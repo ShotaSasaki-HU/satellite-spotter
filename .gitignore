@@ -3,6 +3,8 @@
 
 # Python
 .venv/
+## osmnx
+cache/
 
 # ワイヤーフレーム
 wireframe/assets/
