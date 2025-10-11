@@ -1,0 +1,80 @@
+openapi: 3.0.0
+info:
+  title: Satellite Spotter API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000
+    description: 開発用ローカルサーバー
+paths: # エンドポイント
+  /api/v1/recommend-spots: # /api/v1/の意味は？
+    get:
+      summary: おすすめの観測スポットを検索する．
+      parameters:
+        - name: lat # パラメータ名
+          in: query # URLの末尾に付与されるクエリパラメータに指定
+          required: true # このパラメータは必須
+          description: 探索中心の緯度（十進法度単位）
+          schema:
+            type: number # このパラメータのデータ型を数値に設定
+        - name: lon
+          in: query
+          required: true
+          description: 探索中心の経度（十進法度単位）
+          schema:
+            type: number
+        - name: radius
+          in: query
+          required: true
+          description: 探索半径（km）
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功時のレスポンス
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  spots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        lat:
+                          type: number
+                        lon:
+                          type: number
+                        scores:
+                          type: object # 項目数が固定なためarrayを使わない．objectでは，ラベルによるアクセスが容易．
+                          properties:
+                            visibility: # 最終的な可視性スコア
+                              type: number
+                            topography: # 地形スコア
+                              type: number
+                            sky_glow: # 光害スコア
+                              type: number
+                            rain: # 雨スコア
+                              type: number
+                            cloud: # 雲量スコア
+                              type: number
+                            met_visibility: # 気象学的な視程スコア
+                              type: number
+        '400':
+          description: パラメータが不正な場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "INVALID_PARAMETER"
+                      message:
+                        type: string
+                        example: "lat（緯度）は，-90から90の間で指定してください．"
