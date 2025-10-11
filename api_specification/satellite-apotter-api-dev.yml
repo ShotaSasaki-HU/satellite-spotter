@@ -6,8 +6,8 @@ servers:
   - url: http://localhost:8000
     description: 開発用ローカルサーバー
 paths: # エンドポイント
-  /api/v1/recommend-spots: # /api/v1/の意味は？
-    get:
+  /api/v1/spots: # /apiで通常のページと区別する．/v1でバージョンを管理する．
+    get: # データの取得
       summary: おすすめの観測スポットを検索する．
       parameters:
         - name: lat # パラメータ名
@@ -28,8 +28,8 @@ paths: # エンドポイント
           description: 探索半径（km）
           schema:
             type: integer
-      responses:
-        '200':
+      responses: # URL（リソース）そのものは必ず存在するため，'404'は無し．
+        '200': # OK
           description: 成功時のレスポンス
           content:
             application/json:
@@ -62,7 +62,7 @@ paths: # エンドポイント
                               type: number
                             met_visibility: # 気象学的な視程スコア
                               type: number
-        '400':
+        '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
             application/json:
@@ -78,3 +78,19 @@ paths: # エンドポイント
                       message:
                         type: string
                         example: "lat（緯度）は，-90から90の間で指定してください．"
+        '500': # Internal Server Error（サーバーのミス）
+          description: サーバー内部で予期せぬエラーが発生した場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "INTERNAL_SERVER_ERROR"
+                      message:
+                        type: string
+                        example: "サーバー内部でエラーが発生しました．再度お試しください．"
