@@ -16,18 +16,44 @@ paths: # エンドポイント
           description: 探索中心の緯度（十進法度単位）
           schema:
             type: number # このパラメータのデータ型を数値に設定
+            format: float
+            minimum: -90.0
+            maximum: 90.0
         - name: lon
           in: query
           required: true
           description: 探索中心の経度（十進法度単位）
           schema:
             type: number
+            format: float
+            minimum: -180.0
+            maximum: 180.0
         - name: radius
           in: query
           required: true
           description: 探索半径（km）
           schema:
             type: integer
+            default: 30
+            minimum: 1
+            maximum: 125
+        - name: limit # ページネーション用
+          in: query
+          required: false
+          description: 取得するスポットの最大数
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: offset # ページネーション用
+          in: query
+          required: false
+          description: 取得を開始する位置
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
       responses: # URL（リソース）そのものは必ず存在するため，'404'は無し．
         '200': # OK
           description: 成功時のレスポンス
@@ -79,6 +105,88 @@ paths: # エンドポイント
                         type: string
                         example: "lat（緯度）は，-90から90の間で指定してください．"
         '500': # Internal Server Error（サーバーのミス）
+          description: サーバー内部で予期せぬエラーが発生した場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "INTERNAL_SERVER_ERROR"
+                      message:
+                        type: string
+                        example: "サーバー内部でエラーが発生しました．再度お試しください．"
+  /api/v1/municipalities/coordinates:
+    get:
+      summary: 市区町村の代表座標を検索する．
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 検索したい市区町村名
+          schema:
+            type: string
+        - name: lat
+          in: query
+          required: false
+          description: マップにおける視点の緯度（十進法度単位）
+          schema:
+            type: number
+            format: float
+            minimum: -90.0
+            maximum: 90.0
+        - name: lon
+          in: query
+          required: false
+          description: マップにおける視点の経度（十進法度単位）
+          schema:
+            type: number
+            format: float
+            minimum: -180.0
+            maximum: 180.0
+      responses:
+        '200':
+          description: 成功時のレスポンス（0件の場合は空の配列を返す．）
+          content:
+            application/json:
+              schema:
+                type: array # 使用するのは1件のみだが，検索結果は全て正確に提供する．
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                      description: 市区町村の名称
+                      example: "広島県広島市中区"
+                    lat:
+                      type: number
+                      description: 緯度（十進法度単位）
+                      example: 34.391303
+                    lon:
+                      type: number
+                      description: 経度（十進法度単位）
+                      example: 132.45211
+        '400':
+          description: クエリパラメータが不正な場合
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: "INVALID_PARAMETER"
+                      message:
+                        type: string
+                        example: "必須パラメータが欠落しています．"
+        '500':
           description: サーバー内部で予期せぬエラーが発生した場合
           content:
             application/json:
