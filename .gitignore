@@ -3,6 +3,8 @@
 
 # Python
 .venv/
+*.pyc
+**/__pycache__/
 ## osmnx
 cache/
 
