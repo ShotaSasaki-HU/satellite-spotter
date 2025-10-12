@@ -3,6 +3,7 @@
 
 # VSCode
 satellite-spotter.code-workspace
+.vscode
 
 # Python
 .venv/
