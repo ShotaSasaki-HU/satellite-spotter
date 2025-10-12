@@ -14,6 +14,7 @@
     <img src="https://img.shields.io/badge/-Python-F2C63C.svg?logo=python&style=for-the-badge">
     <img src="https://img.shields.io/badge/-FastAPI-F2C63C.svg?logo=fastapi&style=for-the-badge">
     <!-- ミドルウェア一覧 -->
+    <img src="https://img.shields.io/badge/-Postgresql-336791.svg?logo=PostgreSQL&style=for-the-badge">
     <!-- インフラ一覧 -->
     <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=for-the-badge">
 </p>
