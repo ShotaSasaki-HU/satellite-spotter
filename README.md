@@ -12,6 +12,7 @@
     <!-- バックエンドのフレームワーク一覧 -->
     <!-- バックエンドの言語一覧 -->
     <img src="https://img.shields.io/badge/-Python-F2C63C.svg?logo=python&style=for-the-badge">
+    <img src="https://img.shields.io/badge/-Python-F2C63C.svg?logo=fastapi&style=for-the-badge">
     <!-- ミドルウェア一覧 -->
     <!-- インフラ一覧 -->
 </p>
