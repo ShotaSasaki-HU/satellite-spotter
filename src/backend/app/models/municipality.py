@@ -1,4 +1,4 @@
-# models/municipality.py
+# app/models/municipality.py
 from sqlalchemy import Column, Integer, String, Float
 from app.db.base_class import Base
 
