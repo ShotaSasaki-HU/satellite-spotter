@@ -19,5 +19,5 @@
 ### ~~最適観測地の決定と可視化~~
 
 ## アプリ設計
-- ワイヤーフレームの作成
-- OpenAPI仕様書の作成([仕様書を見る](api_specification/satellite-spotter-api-dev.yml))
+- ワイヤーフレームの作成（[ワイヤーフレームを見る](wireframe/wireframe.pdf)）
+- OpenAPI仕様書の作成（[仕様書を見る](api_specification/satellite-spotter-api-dev.yml)）
