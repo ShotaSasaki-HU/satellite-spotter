@@ -7,4 +7,4 @@ class Municipality(BaseModel):
     lon: float
 
     class Config:
-        orm_mode = True # SQLAlchemyモデルから自動で変換できるようにする設定
+        orm_mode = True # SQLAlchemyモデル（app/models/municipality.py）から自動でこのデータ構造に変換できるようにする設定
