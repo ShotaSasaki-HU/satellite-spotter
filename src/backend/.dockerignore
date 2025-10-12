@@ -1,0 +1,19 @@
+# .dockerignore
+# イメージサイズの削減・ビルドの高速化・セキュリティの向上
+
+# 仮想環境
+.venv/
+
+# Pythonキャッシュ
+__pycache__/
+*.pyc
+
+# エディタ/IDE設定
+.vscode/
+.idea/
+
+# OS固有ファイル
+.DS_Store
+
+# シークレット情報（もしあれば）
+.env
