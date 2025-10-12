@@ -1,3 +1,4 @@
+# app/schemas/municipality.py
 from pydantic import BaseModel
 
 class Municipality(BaseModel):
