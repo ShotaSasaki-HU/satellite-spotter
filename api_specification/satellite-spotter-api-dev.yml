@@ -6,9 +6,9 @@ servers:
   - url: http://localhost:8000
     description: 開発用ローカルサーバー
 paths: # エンドポイント
-  /api/v1/municipalities/coordinates:
+  /api/v1/locations:
     get:
-      summary: 市区町村の代表座標を検索する．
+      summary: 検索クエリに対応する場所の代表座標を検索する．
       parameters:
         - name: q
           in: query
@@ -40,8 +40,8 @@ paths: # エンドポイント
                   properties:
                     name:
                       type: string
-                      description: 市区町村の名称
-                      example: "広島県広島市中区"
+                      description: 場所の名称
+                      example: "北海道札幌市中央区旭ケ丘一丁目"
                     lat:
                       type: number
                       description: 緯度（十進法度単位）

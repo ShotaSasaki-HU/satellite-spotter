@@ -1,9 +1,9 @@
 from fastapi import FastAPI
-from app.routers import municipalities
+from app.routers import locations
 
 app = FastAPI()
 
-app.include_router(municipalities.router)
+app.include_router(locations.router)
 
 @app.get("/")
 def read_root():

@@ -1,9 +1,9 @@
-# app/models/municipality.py
+# app/models/location.py
 from sqlalchemy import Column, Integer, String, Float
 from app.db.base_class import Base
 
-class Municipality(Base):
-    __tablename__ = "municipalities"
+class Location(Base):
+    __tablename__ = "locations"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
