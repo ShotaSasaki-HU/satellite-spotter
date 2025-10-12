@@ -1,6 +1,6 @@
 # models/municipality.py
 from sqlalchemy import Column, Integer, String, Float
-from app.database import Base  # ここからBaseをimportする
+from app.db.base_class import Base
 
 class Municipality(Base):
     __tablename__ = "municipalities"
