@@ -1,0 +1,34 @@
+# frontendのビルドと起動，backendのビルドと起動，dbの起動を全て担う．
+
+version: '3.8'
+
+services:
+  # APIサーバーの定義
+  api:
+    build: ./backend # backend/Dockerfileを使ってビルド
+    ports:
+      - "8080:80" # PCの8080番をコンテナの80番に接続
+    volumes:
+      - ./backend/app:/app # ソースコードの同期
+    environment:
+      # データベース接続情報を環境変数としてコンテナに渡す．
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
+    depends_on:
+      - db # dbサービスが起動してからapiサービスを起動する．
+  
+  # データベースの定義
+  db:
+    image: postgres:15-alpine # 公式のPostgreSQLイメージを使用
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/ # DBデータを永続化
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432" # PCの5432番をコンテナの5432番に接続（DBクライアント用）
+  
+  # Webサーバー（フロントエンド）（将来的に追加）
+
+volumes:
+  postgres_data:

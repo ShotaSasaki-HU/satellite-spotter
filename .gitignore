@@ -9,6 +9,7 @@ satellite-spotter.code-workspace
 .venv/
 *.pyc
 **/__pycache__/
+.env
 ## osmnx
 cache/
 
