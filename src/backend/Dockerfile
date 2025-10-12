@@ -20,9 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 4. アプリケーションコードのコピー
 # 変更頻度の高い残りのファイルをコンテナにコピーする．
 # ただし，.dockerignoreファイルに記載されたものは除外される．
-# COPY . .は，「PCのbackendディレクトリにある全てのものを，コンテナ内の/appディレクトリに丸ごとコピーしてください．」という意味．
-COPY . .
+# COPY . .は，「ローカルのappディレクトリの中身を，コンテナ内の/appディレクトリにコピーしてください．」という意味．
+COPY ./app /app
 
 # 5. コンテナ起動時に実行するコマンド
 # uvicornサーバーを起動します．--host 0.0.0.0 はコンテナ外部からのアクセスを許可するために必須です．
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
