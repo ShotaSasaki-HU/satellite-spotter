@@ -15,6 +15,7 @@
     <img src="https://img.shields.io/badge/-FastAPI-F2C63C.svg?logo=fastapi&style=for-the-badge">
     <!-- ミドルウェア一覧 -->
     <!-- インフラ一覧 -->
+    <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=for-the-badge">
 </p>
 
 ## 主な機能
