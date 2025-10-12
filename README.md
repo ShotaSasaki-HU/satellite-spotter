@@ -63,3 +63,7 @@
 ### 3. アプリ設計
 - ワイヤーフレームの作成（[ワイヤーフレームを見る](wireframe/wireframe.pdf)）
 - OpenAPI仕様書の作成（[仕様書を見る](api_specification/satellite-spotter-api-dev.yml)）
+
+### 4. バックエンドの環境構築
+- FastAPIの動作確認
+- Dockerイメージのビルド試験
