@@ -13,7 +13,7 @@ paths: # エンドポイント
         - name: q
           in: query
           required: true
-          description: 検索したい市区町村名
+          description: 検索したい場所名
           schema:
             type: string
         - name: lat
@@ -28,28 +28,52 @@ paths: # エンドポイント
           description: マップにおける視点の経度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Longitude'
+        - name: limit # ページネーション用
+          in: query
+          required: false
+          description: 取得する場所の最大数
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 100
+        - name: offset # ページネーション用
+          in: query
+          required: false
+          description: 取得を開始する位置
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
       responses:
         '200':
           description: 成功時のレスポンス（0件の場合は空の配列を返す．）
           content:
             application/json:
               schema:
-                type: array # 使用するのは1件のみだが，検索結果は全て正確に提供する．
-                items:
-                  type: object
-                  properties:
-                    name:
-                      type: string
-                      description: 場所の名称
-                      example: "北海道札幌市中央区旭ケ丘一丁目"
-                    lat:
-                      type: number
-                      description: 緯度（十進法度単位）
-                      example: 34.391303
-                    lon:
-                      type: number
-                      description: 経度（十進法度単位）
-                      example: 132.45211
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    description: ヒットした場所の総数（ページネーション用）
+                    example: 42
+                  locations:
+                    type: array # 使用するのは1件のみだが，検索結果は全て正確に提供する．
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          description: 場所の名称
+                          example: "北海道札幌市中央区旭ケ丘一丁目"
+                        lat:
+                          type: number
+                          description: 緯度（十進法度単位）
+                          example: 34.391303
+                        lon:
+                          type: number
+                          description: 経度（十進法度単位）
+                          example: 132.45211
         '400':
           description: クエリパラメータが不正な場合
           content:
@@ -121,10 +145,10 @@ paths: # エンドポイント
                     items:
                       type: object
                       properties:
-                        spot_id:
-                          type: string
+                        id:
+                          type: number
                           description: スポットを一意に識別するID
-                          example: 1910014046
+                          example: 0
                         name:
                           type: string
                           example: 鏡山公園
