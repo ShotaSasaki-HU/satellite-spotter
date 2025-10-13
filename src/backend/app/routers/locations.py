@@ -7,9 +7,27 @@ from app.db import session
 from app.schemas import location as schemas_location
 
 router = APIRouter()
-@router.get("/api/v1/locations", response_model=list[schemas_location.Location])
-def search_locations(q: str, lat: float, lon: float, db: Session = Depends(session.get_db)):
-    results = crud_location.search_locations_and_sort_by_distance(
-        db=db, name=q, lat=lat, lon=lon
+@router.get("/api/v1/locations", response_model=schemas_location.LocationsResponse)
+def search_locations(
+        q: str,
+        lat: float,
+        lon: float,
+        limit: int = 10,
+        offset: int = 0,
+        db: Session = Depends(session.get_db)
+    ):
+    total, results_from_db = crud_location.search_locations_and_sort_by_distance(
+        db=db, name=q, lat=lat, lon=lon, limit=limit, offset=offset
     )
-    return results
+
+    locations_for_response = []
+    for db_location, location_lat, location_lon in results_from_db:
+        locations_for_response.append(
+            schemas_location.Location(
+                name=db_location.name,
+                lat=location_lat,
+                lon=location_lon
+            )
+        )
+
+    return {"total": total, "locations": locations_for_response}

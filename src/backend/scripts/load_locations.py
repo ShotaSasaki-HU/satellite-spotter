@@ -61,9 +61,8 @@ def main():
 
                     # データベースに登録するオブジェクトの辞書を作成
                     location_data = {
-                        "name": full_name,
-                        "lat": float(row["緯度"]),
-                        "lon": float(row["経度"]),
+                        'name': full_name,
+                        'geom': f"POINT ({row['経度']} {row['緯度']})" # lon -> latの順に注意！
                     }
                     locations_to_create.append(location_data)
         

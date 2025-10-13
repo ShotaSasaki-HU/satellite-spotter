@@ -1,16 +1,18 @@
 # app/crud/location.py
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
-from app import models
-import math
+from sqlalchemy import and_
+from app.models import Location
+from geoalchemy2.functions import ST_Distance
+from sqlalchemy import cast
+from geoalchemy2.types import Geometry
 
 def search_locations_and_sort_by_distance(
         db: Session,
         name: str,
         lat: float,
         lon: float,
-        skip: int = 0,
-        limit: int = 20
+        limit: int = 10,
+        offset: int = 0
     ):
     """
     スペース区切りの全ての検索クエリを名前に含むLocationをAND検索し，
@@ -18,28 +20,38 @@ def search_locations_and_sort_by_distance(
     """
     keywords = name.split()
     if not keywords:
-        return []
+        return 0, []
     
     # 各キーワードに対する.contains()条件をリストとして作成
-    conditions = [models.Location.name.contains(kw) for kw in keywords]
+    conditions = [Location.name.contains(kw) for kw in keywords]
 
-    lat_rad = math.radians(lat)
-    lon_rad = math.radians(lon)
+    # 検索中心（SRID=4326：世界測地系WGS84）
+    center_point = f"SRID=4326;POINT({lon} {lat})" # lon -> latの順に注意！
 
-    db_lat_rad = func.radians(models.Location.lat)
-    db_lon_rad = func.radians(models.Location.lon)
-
-    # 球面三角法による距離計算（単位：km）
-    # 6371 は地球の半径
-    distance_formula = 6371 * func.acos(
-        (func.sin(lat_rad) * func.sin(db_lat_rad)) +
-        (func.cos(lat_rad) * func.cos(db_lat_rad) * func.cos(db_lon_rad - lon_rad))
-    )
-
-    query = (
-        db.query(models.Location)
+    base_query = (
+        db.query(
+            Location,
+            cast(Location.geom, Geometry).ST_Y().label('lat'),
+            cast(Location.geom, Geometry).ST_X().label('lon')
+        )
         .filter(and_(*conditions)) # and_() を使って全てのキーワードによる条件を結合
-        .order_by(distance_formula) # 距離でソート
     )
 
-    return query.offset(skip).limit(limit).all()
+    # ページネーションを適用する前に総件数を取得
+    total = base_query.count()
+
+    # 距離でソート・ページネーションを適用
+    results = (
+        base_query
+        .order_by(
+            ST_Distance(
+                Location.geom,
+                center_point
+            )
+        )
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    return total, results
