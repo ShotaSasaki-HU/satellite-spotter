@@ -67,7 +67,7 @@ def main():
                         point_geom = geom_wkt
                         polygon_geom = None
                     elif geom_wkt.startswith('POLYGON'):
-                        point_geom = f'POINT ({row['latitude']} {row['longitude']})'
+                        point_geom = f'POINT ({row['longitude']} {row['latitude']})'
                         polygon_geom = geom_wkt
                     else:
                         continue # MULTIPOLYGONなど，POINTでもPOLYGONでもないものはスキップ．
