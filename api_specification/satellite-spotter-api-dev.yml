@@ -18,13 +18,13 @@ paths: # エンドポイント
             type: string
         - name: lat
           in: query
-          required: false
+          required: true
           description: マップにおける視点の緯度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Latitude'
         - name: lon
           in: query
-          required: false
+          required: true
           description: マップにおける視点の経度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Longitude'
