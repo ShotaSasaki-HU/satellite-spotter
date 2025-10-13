@@ -46,10 +46,35 @@ def main():
         if num_deleted > 0:
             print(f"{num_deleted}件の既存データを削除しました．")
         
-        lacations_to_create = []
+        locations_to_create = []
 
         for csv_path in sorted(DATA_DIR.rglob("*.csv")):
             print(f"{csv_path} を処理中...")
+            with open(csv_path, mode='r', encoding='cp932') as f: # shift_jisだとエラー
+                reader = csv.DictReader(f) # 各行を辞書として読み込み
+                for row in reader:
+                    # 大字町丁目名がない場合は空文字にする
+                    town_name = row.get("大字町丁目名", "")
+
+                    # 検索用のname列を作成
+                    full_name = f'{row["都道府県名"]}{row["市区町村名"]}{town_name}'
+
+                    # データベースに登録するオブジェクトの辞書を作成
+                    location_data = {
+                        "name": full_name,
+                        "lat": float(row["緯度"]),
+                        "lon": float(row["経度"]),
+                    }
+                    locations_to_create.append(location_data)
+        
+        # 全てのデータを一括で挿入（バルクインサート）
+        print(f"{len(locations_to_create)}件のデータを登録します...")
+        db.bulk_insert_mappings(Location, locations_to_create)
+
+        # 変更をコミット
+        db.commit()
+        print("データ登録が正常に完了しました．")
+
     except Exception as e:
         print(f"エラーが発生しました: {e}")
         db.rollback() # エラーが発生した場合はロールバック
@@ -58,32 +83,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-"""
-for csv_path in sorted(DATA_DIR.glob("*.csv")):
-    print(f"{csv_path.name} を処理中...")
-    with open(csv_path, mode='r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            # 大字町丁目名がない場合は空文字にする
-            town_name = row.get("大字町丁目名", "")
-
-            # 検索用のname列を作成
-            full_name = f'{row["都道府県名"]}{row["市区町村名"]}{town_name}'
-                    
-            # データベースに登録するオブジェクトの辞書を作成
-            municipality_data = {
-                "name": full_name,
-                "lat": float(row["緯度"]),
-                "lon": float(row["経度"]),
-            }
-            municipalities_to_create.append(municipality_data)
-
-# 全てのデータを一括で挿入（バルクインサート）
-print(f"合計 {len(municipalities_to_create)} 件のデータを登録します...")
-db.bulk_insert_mappings(Municipality, municipalities_to_create)
-
-# 変更をコミット
-db.commit()
-print("データ登録が正常に完了しました。")
-"""
