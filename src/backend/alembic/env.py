@@ -88,6 +88,18 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # --- ▼▼▼ ここから追-記 ▼▼▼ ---
+    
+    # どのテーブルをAlembicの監視対象にするかを決めるフィルター関数
+    def include_object(object, name, type_, reflected, compare_to):
+        # 'table' タイプの場合、alembic_versionテーブルと自分のモデルで定義したテーブルのみを対象とする
+        if type_ == "table":
+            return name == 'alembic_version' or name in target_metadata.tables
+        else:
+            return True
+            
+    # --- ▲▲▲ ここまで追記 ▲▲▲ ---
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -96,7 +108,11 @@ def run_migrations_online() -> None:
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            # --- ▼▼▼ この一行を追記 ▼▼▼ ---
+            include_object=include_object # 上で定義したフィルター関数を設定
+            # --- ▲▲▲ この一行を追記 ▲▲▲ ---
         )
 
         with context.begin_transaction():
