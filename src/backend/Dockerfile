@@ -25,4 +25,4 @@ COPY . .
 
 # 5. コンテナ起動時に実行するコマンド
 # uvicornサーバーを起動します．--host 0.0.0.0 はコンテナ外部からのアクセスを許可するために必須です．
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80", "--reload"]
