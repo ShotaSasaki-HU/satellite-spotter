@@ -18,7 +18,7 @@ services:
   
   # データベースの定義
   db:
-    image: postgres:15-alpine # 公式のPostgreSQLイメージを使用
+    image: postgis/postgis:15-3.4 # PostGIS同梱版イメージ
     volumes:
       - postgres_data:/var/lib/postgresql/data/ # DBデータを永続化
     environment:
