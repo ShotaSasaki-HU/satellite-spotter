@@ -8,6 +8,8 @@ from app.schemas import location as schemas_location
 
 router = APIRouter()
 @router.get("/api/v1/locations", response_model=list[schemas_location.Location])
-def search_locations(q: str, db: Session = Depends(session.get_db)):
-    results = crud_location.get_locations_by_name_and(db=db, name=q)
+def search_locations(q: str, lat: float, lon: float, db: Session = Depends(session.get_db)):
+    results = crud_location.search_locations_and_sort_by_distance(
+        db=db, name=q, lat=lat, lon=lon
+    )
     return results
