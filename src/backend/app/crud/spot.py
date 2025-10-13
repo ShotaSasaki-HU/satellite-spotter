@@ -1,0 +1,33 @@
+# app/crud/spot.py
+from sqlalchemy.orm import Session
+from app.models import Spot
+from geoalchemy2.functions import ST_DWithin
+
+def search_spots_within_radius(
+        db: Session,
+        lat: float,
+        lon: float,
+        radius_km: int,
+        skip: int = 0,
+        limit: int = 100
+    ):
+    """
+    指定された中心座標から半径内にあるスポットを検索する．
+    """
+    # 検索中心（SRID=4326：世界測地系WGS84）
+    center_point = f"SRID=4326;POINT({lon} {lat})" # lon -> latの順に注意！
+
+    radius_m = radius_km * 1000
+
+    query = (
+        db.query(Spot)
+        .filter(
+            ST_DWithin(
+                Spot.geom,    # スポットのgeomカラム
+                center_point, # 検索中心のポイント
+                radius_m      # 検索半径（m）
+            )
+        )
+    )
+
+    return query.offset(skip).limit(limit).all()
