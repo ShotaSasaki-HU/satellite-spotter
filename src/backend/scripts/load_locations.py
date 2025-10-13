@@ -5,9 +5,11 @@
 
 import os
 import sys
+import csv
 from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+from dotenv import load_dotenv
 
 # backend/ をPythonの検索パスに追加（先に実行しないとappが見つからないよ．）
 sys.path.append(str(Path(__file__).resolve().parent.parent))
@@ -15,9 +17,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from app.models.location import Location
 
 # 環境変数の読み込み
-from dotenv import load_dotenv
 dotenv_path = Path(__file__).resolve().parents[2] / '.env'
-print("dotenv_path:", dotenv_path)
 load_dotenv(dotenv_path=dotenv_path)
 
 # このスクリプト専用のDB接続情報を生成
@@ -40,7 +40,50 @@ def main():
 
     db: Session = SessionLocal()
 
-    print(DATA_DIR)
+    try:
+        # 既存のデータを全て削除（冪等性を保つため）
+        num_deleted = db.query(Location).delete()
+        if num_deleted > 0:
+            print(f"{num_deleted}件の既存データを削除しました．")
+        
+        lacations_to_create = []
+
+        for csv_path in sorted(DATA_DIR.rglob("*.csv")):
+            print(f"{csv_path} を処理中...")
+    except Exception as e:
+        print(f"エラーが発生しました: {e}")
+        db.rollback() # エラーが発生した場合はロールバック
+    finally:
+        db.close() # セッションを閉じる
 
 if __name__ == "__main__":
     main()
+
+"""
+for csv_path in sorted(DATA_DIR.glob("*.csv")):
+    print(f"{csv_path.name} を処理中...")
+    with open(csv_path, mode='r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            # 大字町丁目名がない場合は空文字にする
+            town_name = row.get("大字町丁目名", "")
+
+            # 検索用のname列を作成
+            full_name = f'{row["都道府県名"]}{row["市区町村名"]}{town_name}'
+                    
+            # データベースに登録するオブジェクトの辞書を作成
+            municipality_data = {
+                "name": full_name,
+                "lat": float(row["緯度"]),
+                "lon": float(row["経度"]),
+            }
+            municipalities_to_create.append(municipality_data)
+
+# 全てのデータを一括で挿入（バルクインサート）
+print(f"合計 {len(municipalities_to_create)} 件のデータを登録します...")
+db.bulk_insert_mappings(Municipality, municipalities_to_create)
+
+# 変更をコミット
+db.commit()
+print("データ登録が正常に完了しました。")
+"""
