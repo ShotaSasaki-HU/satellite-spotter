@@ -44,12 +44,20 @@ def main():
             print(f"{num_deleted}件の既存データを削除しました．")
         
         spots_to_create = []
+        processed_osm_id = set()
 
         for csv_path in sorted(DATA_DIR.rglob("*.csv")):
             print(f"{csv_path} を処理中...")
             with open(csv_path, mode='r', encoding='utf-8') as f:
                 reader = csv.DictReader(f) # 各行を辞書として読み込み
                 for row in reader:
+                    # 同じ行が2つ存在する事がある．
+                    osm_id = int(row.get('id', -1))
+                    if osm_id > -1 and osm_id in processed_osm_id:
+                        continue
+                    else:
+                        processed_osm_id.add(osm_id)
+
                     geom_wkt = row.get('geometry')
                     if not geom_wkt:
                         continue
@@ -65,7 +73,7 @@ def main():
                         continue # MULTIPOLYGONなど，POINTでもPOLYGONでもないものはスキップ．
                     
                     spot_data = {
-                        'osm_id': int(row.get('id', 0)),
+                        'osm_id': osm_id,
                         'name': row.get('name', 'N/A'),
                         'name_en': row.get('name:en'),
                         'geom': point_geom, # POINTのWKT文字列をセット
