@@ -1,7 +1,5 @@
 # frontendのビルドと起動，backendのビルドと起動，dbの起動を全て担う．
 
-version: '3.8'
-
 services:
   # APIサーバーの定義
   api:
