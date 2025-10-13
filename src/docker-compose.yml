@@ -9,7 +9,7 @@ services:
     ports:
       - "8080:80" # PCの8080番をコンテナの80番に接続
     volumes:
-      - ./backend/app:/app # ソースコードの同期
+      - ./backend:/app # ソースコードの同期
     environment:
       # データベース接続情報を環境変数としてコンテナに渡す．
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}
