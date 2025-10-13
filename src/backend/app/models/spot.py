@@ -16,8 +16,6 @@ class Spot(Base):
     geom = Column(Geography(geometry_type='POINT', srid=4326), nullable=False) # 代表座標
     polygon_geom = Column(Geography(geometry_type='POLYGON', srid=4326), nullable=True) # POLYGONがあれば格納
 
-    osm_tag = Column(String, nullable=True) # parkやviewpointなど
-
     # 時間的に変化しない静的な評価指標
     horizon_profile = Column(ARRAY(Float), nullable=True)
     sky_glow_score = Column(Float, nullable=True)
