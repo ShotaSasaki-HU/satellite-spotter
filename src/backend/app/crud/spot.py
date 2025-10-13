@@ -2,6 +2,8 @@
 from sqlalchemy.orm import Session
 from app.models import Spot
 from geoalchemy2.functions import ST_DWithin
+from sqlalchemy import cast
+from geoalchemy2.types import Geometry
 
 def search_spots_within_radius(
         db: Session,
@@ -20,7 +22,11 @@ def search_spots_within_radius(
     radius_m = radius_km * 1000
 
     query = (
-        db.query(Spot)
+        db.query(
+            Spot,
+            cast(Spot.geom, Geometry).ST_Y().label('lat'),
+            cast(Spot.geom, Geometry).ST_X().label('lon')
+        )
         .filter(
             ST_DWithin(
                 Spot.geom,    # スポットのgeomカラム

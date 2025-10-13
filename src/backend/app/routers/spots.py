@@ -17,9 +17,22 @@ def search_spots(
     """
     指定された中心座標から半径radius(km)以内にある観測スポットの候を検索する。
     """
-    spots_list = crud_spot.get_spots_within_radius(
+    # CRUD関数は（Spotオブジェクト，緯度，経度）のタプルのリストを返す．
+    results_from_db = crud_spot.search_spots_within_radius(
         db=db, lat=lat, lon=lon, radius_km=radius
     )
 
+    # タプルのリストを、APIスキーマオブジェクトのリストに変換する
+    spots_for_response = []
+    for db_spot, spot_lat, spot_lon in results_from_db:
+        spots_for_response.append(
+            schemas_spot.Spot(
+                id=db_spot.id,
+                name=db_spot.name,
+                lat=spot_lat,
+                lon=spot_lon
+            )
+        )
+
     # スキーマの形に合わせて，totalとspotsを含む辞書を返す．
-    return {"total": len(spots_list), "spots": spots_list}
+    return {"total": len(spots_for_response), "spots": spots_for_response}
