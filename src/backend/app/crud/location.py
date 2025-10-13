@@ -1,9 +1,8 @@
 # app/crud/location.py
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
-from app.models import Location
+from sqlalchemy import and_, cast, union_all, func
+from app.models import Location, Spot
 from geoalchemy2.functions import ST_Distance
-from sqlalchemy import cast
 from geoalchemy2.types import Geometry
 
 def search_locations_and_sort_by_distance(
@@ -21,31 +20,38 @@ def search_locations_and_sort_by_distance(
     keywords = name.split()
     if not keywords:
         return 0, []
-    
-    # 各キーワードに対する.contains()条件をリストとして作成
-    conditions = [Location.name.contains(kw) for kw in keywords]
 
-    # 検索中心（SRID=4326：世界測地系WGS84）
-    center_point = f"SRID=4326;POINT({lon} {lat})" # lon -> latの順に注意！
-
-    base_query = (
-        db.query(
-            Location,
-            cast(Location.geom, Geometry).ST_Y().label('lat'),
-            cast(Location.geom, Geometry).ST_X().label('lon')
+    queries = []
+    # 検索対象のモデルをリスト化
+    for model in [Location, Spot]:
+        conditions = [model.name.contains(kw) for kw in keywords]
+        query = (
+            db.query(
+                model.name.label('name'),
+                cast(model.geom, Geometry).ST_Y().label('lat'),
+                cast(model.geom, Geometry).ST_X().label('lon'),
+                model.geom.label('geom')
+            )
+            .filter(and_(*conditions))
         )
-        .filter(and_(*conditions)) # and_() を使って全てのキーワードによる条件を結合
-    )
+        queries.append(query)
 
-    # ページネーションを適用する前に総件数を取得
-    total = base_query.count()
+    # 2つのクエリを統合してサブクエリとして扱う．
+    # .subqueryでラップすることで，'unified_sq' という名前の仮想テーブルになる．
+    unified_sq = union_all(*queries).subquery("unified_sq")
+
+    # ページネーション前の総件数をサブクエリから取得
+    total_query = db.query(func.count()).select_from(unified_sq)
+    total = total_query.scalar()
+
+    center_point = f"SRID=4326;POINT({lon} {lat})" # lon -> latの順に注意！
 
     # 距離でソート・ページネーションを適用
     results = (
-        base_query
+        db.query(unified_sq)
         .order_by(
             ST_Distance(
-                Location.geom,
+                unified_sq.c.geom, # 仮想テーブルのカラムは .c 経由でアクセス
                 center_point
             )
         )

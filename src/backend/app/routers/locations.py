@@ -21,12 +21,12 @@ def search_locations(
     )
 
     locations_for_response = []
-    for db_location, location_lat, location_lon in results_from_db:
+    for row in results_from_db:
         locations_for_response.append(
             schemas_location.Location(
-                name=db_location.name,
-                lat=location_lat,
-                lon=location_lon
+                name=row.name,
+                lat=row.lat,
+                lon=row.lon
             )
         )
 
