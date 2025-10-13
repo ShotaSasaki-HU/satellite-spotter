@@ -1,5 +1,5 @@
 # app/models/spot.py
-from sqlalchemy import Column, Integer, String, ARRAY, Float
+from sqlalchemy import Column, Integer, String, ARRAY, Float, BigInteger
 from app.db.base_class import Base
 from geoalchemy2 import Geography
 
@@ -7,7 +7,7 @@ class Spot(Base):
     __tablename__ = "spots"
 
     id = Column(Integer, primary_key=True, index=True) # アプリ専用の主id
-    osm_id = Column(Integer, unique=True, index=True, nullable=True) # OSMのID
+    osm_id = Column(BigInteger, unique=True, index=True, nullable=True) # OSMのID
 
     name = Column(String, nullable=False)
     name_en = Column(String, nullable=True)
