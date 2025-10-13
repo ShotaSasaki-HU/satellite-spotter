@@ -3,3 +3,4 @@
 # このおかげでcrudなどにおいて，from app import models と書けば models.Location とテーブル定義を指定できる．
 # これが無いと，from app.models.location import Location と書かなければならない．
 from .location import Location
+from .spot import Spot
