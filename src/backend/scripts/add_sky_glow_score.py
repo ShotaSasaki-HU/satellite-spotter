@@ -1,4 +1,4 @@
-# scripts/generate_csv_sky_glow_score.py
+# scripts/add_sky_glow_score.py
 
 import sys
 from pathlib import Path
