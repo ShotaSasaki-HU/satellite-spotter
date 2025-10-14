@@ -71,6 +71,23 @@ def main():
                         polygon_geom = geom_wkt
                     else:
                         continue # MULTIPOLYGONなど，POINTでもPOLYGONでもないものはスキップ．
+
+                    # 稜線プロファイルのカンマ区切り文字列をfloatのリストに変換
+                    horizon_profile_str = row.get('horizon_profile')
+                    horizon_profile_list = None
+                    if horizon_profile_str and isinstance(horizon_profile_str, str):
+                        try:
+                            horizon_profile_list = [float(val) for val in horizon_profile_str.split(',')]
+                        except ValueError:
+                            # 変換に失敗した場合はNoneのままにする
+                            print(f"警告: osm_id {osm_id} のhorizon_profileのパースに失敗しました。")
+                            horizon_profile_list = None
+
+                    # 光害スコアをfloatに変換
+                    try:
+                        sky_glow_score = float(row.get('sky_glow_score')) if row.get('sky_glow_score') else None
+                    except (ValueError, TypeError):
+                        sky_glow_score = None
                     
                     spot_data = {
                         'osm_id': osm_id,
@@ -78,6 +95,8 @@ def main():
                         'name_en': row.get('name:en'),
                         'geom': point_geom, # POINTのWKT文字列をセット
                         'polygon_geom': polygon_geom, # POLYGONのWKT文字列またはNoneをセット
+                        'horizon_profile': horizon_profile_list,
+                        'sky_glow_score': sky_glow_score,
                     }
                     spots_to_create.append(spot_data)
         
