@@ -8,43 +8,28 @@ servers:
 paths: # エンドポイント
   /api/v1/locations:
     get:
-      summary: 検索クエリに対応する場所の代表座標を検索する．
+      summary: マップ移動用に検索クエリに対応する場所の代表座標を取得する．
       parameters:
+        - name: lat
+          in: query
+          required: false # 任意
+          description: マップにおける視点の緯度（十進法度単位）
+          schema:
+            $ref: '#/components/schemas/Latitude'
+        - name: lon
+          in: query
+          required: false # 任意
+          description: マップにおける視点の経度（十進法度単位）
+          schema:
+            $ref: '#/components/schemas/Longitude'
         - name: q
           in: query
           required: true
           description: 検索したい場所名
           schema:
             type: string
-        - name: lat
-          in: query
-          required: true
-          description: マップにおける視点の緯度（十進法度単位）
-          schema:
-            $ref: '#/components/schemas/Latitude'
-        - name: lon
-          in: query
-          required: true
-          description: マップにおける視点の経度（十進法度単位）
-          schema:
-            $ref: '#/components/schemas/Longitude'
-        - name: limit # ページネーション用
-          in: query
-          required: false
-          description: 取得する場所の最大数
-          schema:
-            type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-        - name: offset # ページネーション用
-          in: query
-          required: false
-          description: 取得を開始する位置
-          schema:
-            type: integer
-            default: 0
-            minimum: 0
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
       responses:
         '200':
           description: 成功時のレスポンス（0件の場合は空の配列を返す．）
@@ -55,10 +40,10 @@ paths: # エンドポイント
                 properties:
                   total:
                     type: integer
-                    description: ヒットした場所の総数（ページネーション用）
+                    description: ヒット件数（ページネーション用）
                     example: 42
                   locations:
-                    type: array # 使用するのは1件のみだが，検索結果は全て正確に提供する．
+                    type: array
                     items:
                       type: object
                       properties:
@@ -86,19 +71,19 @@ paths: # エンドポイント
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/spots: # /apiで通常のページと区別する．/v1でバージョンを管理する．
-    get: # データの取得
-      summary: 観測スポット候補を検索する．
+  /api/v1/recommendations/events:
+    get:
+      summary: 指定された範囲から，座標群と観測イベント群を取得する．
       parameters:
-        - name: lat # パラメータ名
-          in: query # URLの末尾に付与されるクエリパラメータに指定
-          required: true # このパラメータは必須
+        - name: lat
+          in: query
+          required: true # 必須
           description: 探索中心の緯度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Latitude'
         - name: lon
           in: query
-          required: true
+          required: true # 必須
           description: 探索中心の経度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Longitude'
@@ -111,25 +96,10 @@ paths: # エンドポイント
             default: 30
             minimum: 1
             maximum: 125
-        - name: limit # ページネーション用
-          in: query
-          required: false
-          description: 取得するスポットの最大数
-          schema:
-            type: integer
-            default: 10
-            minimum: 1
-            maximum: 100
-        - name: offset # ページネーション用
-          in: query
-          required: false
-          description: 取得を開始する位置
-          schema:
-            type: integer
-            default: 0
-            minimum: 0
-      responses: # URL（リソース）そのものは必ず存在するため，'404'は無し．
-        '200': # OK
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
           description: 成功時のレスポンス
           content:
             application/json:
@@ -138,26 +108,19 @@ paths: # エンドポイント
                 properties:
                   total:
                     type: integer
-                    description: ヒットしたスポットの総数（ページネーション用）
+                    description: ヒット件数（ページネーション用）
                     example: 42
-                  spots:
+                  events:
                     type: array
                     items:
                       type: object
-                      properties:
-                        id:
-                          type: number
-                          description: スポットを一意に識別するID
-                          example: 0
-                        name:
+                      allOf: # allOf を使って共通スキーマを継承
+                        - $ref: '#/components/schemas/EventBase'
+                      properties: # 差分だけを記述
+                        location_name:
                           type: string
-                          example: 鏡山公園
-                        lat:
-                          type: number
-                          description: 緯度（十進法度単位）
-                        lon:
-                          type: number
-                          description: 経度（十進法度単位）
+                          description: 公園や展望台の名前
+                          example: "鏡山公園"                
         '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
@@ -170,22 +133,24 @@ paths: # エンドポイント
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /api/v1/events:
+  /api/v1/forecasts/events:
     get:
-      summary: 特定の座標で見える観測イベントのリストを取得する．
+      summary: 指定された座標から，観測イベント群を取得する．
       parameters:
         - name: lat
           in: query
-          required: true
-          description: 緯度（十進法度単位）
+          required: true # 必須
+          description: ユーザの好みの緯度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Latitude'
         - name: lon
           in: query
-          required: true
-          description: 経度（十進法度単位）
+          required: true # 必須
+          description: ユーザの好みの経度（十進法度単位）
           schema:
             $ref: '#/components/schemas/Longitude'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
       responses:
         '200':
           description: 成功時のレスポンス
@@ -194,32 +159,14 @@ paths: # エンドポイント
               schema:
                 type: object
                 properties:
+                  total:
+                    type: integer
+                    description: ヒット件数（ページネーション用）
+                    example: 42
                   events:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        start_time:
-                          type: string
-                          format: date-time
-                          description: イベントの開始時刻（ISO 8601）
-                          example: "2025-10-11T19:50:45+09:00"
-                        visibility:
-                          type: number
-                          description: 最終的な可視性スコア
-                          example: 0.8
-                          minimum: 0.0
-                          maximum: 1.0
-                        event_type:
-                          type: string
-                          description: 観測対象のタイプ（ISS, Starlink Satellite Train, etc.）
-                          example: "Starlink Satellite Train"
-                        international_designators:
-                          type: array
-                          items:
-                            type: string
-                            description: 詳細表示の際に衛星を一意に識別するための国際衛星識別符号
-                          example: ["2025-223A", "2025-223B", "2025-223C", "2025-223D", "2025-223E"]
+                      $ref: '#/components/schemas/EventBase'
         '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
@@ -236,18 +183,6 @@ paths: # エンドポイント
     get:
       summary: 特定のイベントの軌道とスコア詳細を取得する．
       parameters:
-        - name: lat
-          in: query
-          required: true
-          description: 緯度（十進法度単位）
-          schema:
-            $ref: '#/components/schemas/Latitude'
-        - name: lon
-          in: query
-          required: true
-          description: 経度（十進法度単位）
-          schema:
-            $ref: '#/components/schemas/Longitude'
         - name: start_time
           in: query
           required: true
@@ -256,6 +191,18 @@ paths: # エンドポイント
             type: string
             format: date-time
             example: "2025-10-11T19:50:45+09:00"
+        - name: lat
+          in: query
+          required: true # 必須
+          description: 観測地点の緯度（十進法度単位）
+          schema:
+            $ref: '#/components/schemas/Latitude'
+        - name: lon
+          in: query
+          required: true # 必須
+          description: 観測地点の経度（十進法度単位）
+          schema:
+            $ref: '#/components/schemas/Longitude'
         - name: international_designators
           in: query
           required: true
@@ -364,17 +311,69 @@ paths: # エンドポイント
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: 取得する最大数（ページネーション用）
+      schema:
+        type: integer
+        default: 10
+        minimum: 1
+        maximum: 100
+    Offset:
+      name: offset
+      in: query
+      required: false
+      description: 取得を開始する位置（ページネーション用）
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
   schemas:
-    Latitude: # 緯度のスキーマ
+    Latitude:
       type: number
       format: float
       minimum: -90.0
       maximum: 90.0
-    Longitude: # 経度のスキーマ
+    Longitude:
       type: number
       format: float
       minimum: -180.0
       maximum: 180.0
+    EventBase: # イベントの共通スキーマ
+      type: object
+      properties:
+        start_time:
+          type: string
+          format: date-time
+          description: イベントの開始時刻（ISO 8601）
+          example: "2025-10-11T19:50:45+09:00"
+        visibility:
+          type: number
+          description: 最終的な可視性スコア
+          example: 0.8
+          minimum: 0.0
+          maximum: 1.0
+        event_type:
+          type: string
+          description: 観測対象のタイプ（ISS, Starlink Satellite Train, etc.）
+          example: "Starlink Satellite Train"
+        lat:
+          type: number
+          format: float
+          description: 緯度（十進法度単位）
+        lon:
+          type: number
+          format: float
+          description: 経度（十進法度単位）
+        international_designators:
+          type: array
+          items:
+            type: string
+            description: 詳細表示の際に衛星を一意に識別するための国際衛星識別符号
+          example: ["2025-223A", "2025-223B", "2025-223C", "2025-223D", "2025-223E"]
     ErrorResponse: # 共通のエラーレスポンスを定義（DRY原則に基づき）
       type: object
       properties:
