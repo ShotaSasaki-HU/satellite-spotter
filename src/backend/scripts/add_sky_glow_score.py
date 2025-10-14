@@ -1,14 +1,11 @@
 # scripts/add_sky_glow_score.py
 
-import sys
 from pathlib import Path
 import pandas as pd
 import rasterio
 import pyproj
 import numpy as np
-
-# backend/ をPythonの検索パスに追加（先に実行しないとappが見つからないよ．）
-sys.path.append(str(Path(__file__).resolve().parent.parent))
+from tqdm import tqdm
 
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "観測候補地点"
 
@@ -94,11 +91,15 @@ def main():
         for csv_path in sorted(DATA_DIR.rglob("*.csv")):
             print(f"{csv_path} を処理中...")
             df = pd.read_csv(csv_path, encoding='utf-8', header=0)
+            print(f"{len(df)}件のスポットの光害スコアを計算中...")
 
             path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
 
-            # df.applyを使って1行ずつcalc_sky_glow_score関数を実行
-            df['sky_glow_score'] = df.apply(
+            # tqdmとpandasを連携・プログレスバーの説明を設定
+            tqdm.pandas(desc="Calculating Sky Glow Score")
+
+            # 1行ずつcalc_sky_glow_score関数を実行
+            df['sky_glow_score'] = df.progress_apply(
                 lambda row: calc_sky_glow_score(
                     path_nighttime_light=path_viirs_tiff,
                     observer_lat=row['latitude'],
@@ -109,6 +110,7 @@ def main():
 
             print(f"{csv_path} を保存中...")
             df.to_csv(csv_path, index=False, encoding='utf-8')
+            print('---')
 
         print("光害スコアの追記が正常に完了しました．")
 
