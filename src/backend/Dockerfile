@@ -9,7 +9,14 @@ FROM python:3.13-slim
 # コンテナ内の/appディレクトリで作業します．
 WORKDIR /app
 
-# 3. 依存関係のインストール（キャッシュ利用）
+# 3. pip installの前に，rasterioが必要とするシステムライブラリをインストールする．
+RUN apt-get update && apt-get install -y \
+    gdal-bin \
+    libgdal-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# 3'. 依存関係のインストール（キャッシュ利用）
 # まず，アプリのコードなどより先に，変更頻度の低いrequirements.txtだけをコピーし，ライブラリをインストールする．
 # COPYコマンドは，ファイルに変更があればキャッシュは使用せず，新規にコピーを行う．
 # requirements.txtに変更がなかった場合は，重いインストールがスキップされ，ビルドが高速になる．
