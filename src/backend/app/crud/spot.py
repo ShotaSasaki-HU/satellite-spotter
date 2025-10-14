@@ -2,32 +2,25 @@
 from sqlalchemy.orm import Session
 from app.models import Spot
 from geoalchemy2.functions import ST_DWithin
-from sqlalchemy import cast
-from geoalchemy2.types import Geometry
 
-def search_spots_within_radius(
-        db: Session,
-        lat: float,
-        lon: float,
-        radius_km: int,
-        limit: int = 10,
-        offset: int = 0
-    ):
+def get_top_spots_by_static_score(
+    db: Session,
+    lat: float,
+    lon: float,
+    radius_km: int,
+    limit: int = 10 # ページネーションではなく，足切り用．
+) -> list[Spot]:
     """
-    指定された中心座標から半径内にあるスポットを検索し，総件数とページネーション適用後の結果を返す．
-    DBからAPIサーバーへ無駄なデータを流さないために，CRUD関数がページネーションを担う．
+    指定された中心座標から半径内にあるスポットを検索する．
     """
     # 検索中心（SRID=4326：世界測地系WGS84）
     center_point = f"SRID=4326;POINT({lon} {lat})" # lon -> latの順に注意！
-
     radius_m = radius_km * 1000
 
-    base_query = (
-        db.query(
-            Spot,
-            cast(Spot.geom, Geometry).ST_Y().label('lat'),
-            cast(Spot.geom, Geometry).ST_X().label('lon')
-        )
+    # 足切りするため，適当に静的スコアを組み合わせて「場所の良さ」を概算．
+
+    return (
+        db.query(Spot)
         .filter(
             ST_DWithin(
                 Spot.geom,    # スポットのgeomカラム
@@ -35,12 +28,5 @@ def search_spots_within_radius(
                 radius_m      # 検索半径（m）
             )
         )
+        .all() # Rowオブジェクトのlistになる．
     )
-
-    # ページネーションを適用する前に総件数を取得
-    total = base_query.count()
-
-    # ページネーションを適用
-    results = base_query.offset(offset).limit(limit).all()
-
-    return total, results
