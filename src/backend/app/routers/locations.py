@@ -10,8 +10,8 @@ router = APIRouter()
 @router.get("/api/v1/locations", response_model=schemas_location.LocationsResponse)
 def search_locations(
         q: str,
-        lat: float,
-        lon: float,
+        lat: float = 34.39775, # デフォルト：広島駅
+        lon: float = 132.475472,
         limit: int = 10,
         offset: int = 0,
         db: Session = Depends(session.get_db)
