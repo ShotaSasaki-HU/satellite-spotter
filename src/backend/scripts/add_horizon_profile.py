@@ -80,8 +80,12 @@ def calc_hidden_height(observer_height: float, target_distance: float) -> float:
     """
     EARTH_R = 6371000.0 # 地球の半径（m）
 
-    # 観測者の視点から水平線までの距離（厳密式）
-    dist_to_horizon = np.sqrt((2 * EARTH_R * observer_height) + (observer_height ** 2))
+    # 観測者の視点が0m未満の場合，水平線までの距離は0とする．（elseの式に負のobserver_heightが代入できないため．）
+    if observer_height < 0:
+        dist_to_horizon = 0.0
+    else:
+        # 観測者の視点から水平線までの距離（厳密式）
+        dist_to_horizon = np.sqrt((2 * EARTH_R * observer_height) + (observer_height ** 2))
 
     if target_distance < dist_to_horizon:
         # 対象が水平線より手前にある場合，地球の丸みによって対象が隠される事は無い．
@@ -175,8 +179,12 @@ def calc_horizon_profile_parallel(
     """
     # 観測者の準備
     observer_ground_elev = get_elevations_by_coords(coords=[{'lat': observer_lat, 'lon': observer_lon}])[0]
-    if np.isnan(observer_ground_elev):
-        raise ValueError("観測地点の標高が取得できませんでした．")
+    if observer_ground_elev < -1000 or np.isnan(observer_ground_elev):
+        print(f"⚠️警告: 観測地点 ({observer_lat}, {observer_lon}) の標高が取得できませんでした．スキップします．")
+        empty_profile = np.full(num_directions, np.nan)
+        azimuths = np.linspace(0, 360, num_directions, endpoint=False)
+        return empty_profile, azimuths
+    
     observer_height = observer_ground_elev + observer_eye_height
 
     # 計算パラメータの準備
@@ -215,7 +223,7 @@ def main():
                 lambda row: calc_horizon_profile_parallel(
                     observer_lat=row['latitude'],
                     observer_lon=row['longitude'],
-                    num_directions=360,
+                    num_directions=180,
                     max_distance=100000,
                     num_samples=100
                 ),
