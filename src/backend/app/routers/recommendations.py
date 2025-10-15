@@ -6,6 +6,7 @@ from app.db import session
 from app.schemas import event as schemas_event
 from app.crud import spot as crud_spot
 from app.services.event_service import get_events_for_the_coord
+from app.core.config import Settings, get_settings
 
 router = APIRouter()
 @router.get("/api/v1/recommendations/events", response_model=schemas_event.EventResponse)
@@ -15,7 +16,8 @@ def recommend_events(
     radius: int,
     limit: int = 10,
     offset: int = 0,
-    db: Session = Depends(session.get_db)
+    db: Session = Depends(session.get_db),
+    settings: Settings = Depends(get_settings)
 ):
     # 1. 探索中心と探索半径を用いて，観測候補スポットのRowオブジェクトのリストを取得．
     potential_spots = crud_spot.get_top_spots_by_static_score(
@@ -30,7 +32,8 @@ def recommend_events(
             lat=row.lat,
             lon=row.lon,
             horizon_profile=row.horizon_profile,
-            sky_glow_score=row.sky_glow_score
+            sky_glow_score=row.sky_glow_score,
+            settings=settings
         )
         if events_for_the_spot:
             unified_events.extend(events_for_the_spot)

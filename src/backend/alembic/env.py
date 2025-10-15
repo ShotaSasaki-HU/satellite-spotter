@@ -13,20 +13,12 @@ from alembic import context
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 # 2. .envファイルから環境変数を読み込む
-from dotenv import load_dotenv
-dotenv_path = Path(__file__).resolve().parents[2] / '.env'
-load_dotenv(dotenv_path=dotenv_path)
+from app.core.config import get_settings
+settings = get_settings()
+LOCAL_DATABASE_URL = settings.DATABASE_URL
 
 # 3. SQLAlchemyモデルをインポートして，Alembicにテーブルの存在を教える．
 from app.db import base # app/db/base.py を活用して管理したいモデルを全てインポート
-
-# 4. 実行環境に合わせたデータベースURLを設定
-import os
-# ローカルスクリプトとして実行するため、ホスト名は'localhost'
-DB_USER = os.environ.get("POSTGRES_USER")
-DB_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
-DB_NAME = os.environ.get("POSTGRES_DB")
-LOCAL_DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@localhost:5432/{DB_NAME}"
 
 # --- ▲▲▲ ここまで修正・追記 ▲▲▲ ---
 
