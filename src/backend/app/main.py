@@ -1,11 +1,11 @@
 # app/main.py
 from fastapi import FastAPI
-from app.routers import locations, spots
+from app.routers import locations, recommendations
 
 app = FastAPI()
 
 app.include_router(locations.router)
-app.include_router(spots.router)
+app.include_router(recommendations.router)
 
 @app.get("/")
 def read_root():
