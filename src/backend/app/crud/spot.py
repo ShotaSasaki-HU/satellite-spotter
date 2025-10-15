@@ -47,6 +47,7 @@ def get_top_spots_by_static_score(
 
     results_query = (
         db.query(
+            Spot.name.label('name'),
             cast(Spot.geom, Geometry).ST_Y().label('lat'),
             cast(Spot.geom, Geometry).ST_X().label('lon'),
             Spot.horizon_profile.label('horizon_profile'),

@@ -2,11 +2,12 @@
 from app.schemas.event import Event
 
 def get_events_for_the_coord(
+        location_name: str | None,
         lat: float,
         lon: float,
         horizon_profile: list[float] | None,
-        sky_glow_score: float
-    ) -> list[Event] | None:
+        sky_glow_score: float | None
+    ) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
