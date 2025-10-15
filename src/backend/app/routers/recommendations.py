@@ -26,8 +26,8 @@ def recommend_events(
     unified_events = []
     for row in potential_spots:
         events_for_the_spot = get_events_for_the_coord(
-            lat=row.geom.ST_Y(),
-            lon=row.geom.ST_X(),
+            lat=row.lat,
+            lon=row.lon,
             horizon_profile=row.horizon_profile,
             sky_glow_score=row.sky_glow_score
         )
