@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, select, column, cast, Float, case
 from app.models import Spot
 from geoalchemy2.functions import ST_DWithin
+from geoalchemy2.types import Geometry
 
 def get_top_spots_by_static_score(
     db: Session,
@@ -46,8 +47,8 @@ def get_top_spots_by_static_score(
 
     results_query = (
         db.query(
-            Spot.geom.ST_Y().label('lat'),
-            Spot.geom.ST_X().label('lon'),
+            cast(Spot.geom, Geometry).ST_Y().label('lat'),
+            cast(Spot.geom, Geometry).ST_X().label('lon'),
             Spot.horizon_profile.label('horizon_profile'),
             Spot.sky_glow_score.label('sky_glow_score')
         )
