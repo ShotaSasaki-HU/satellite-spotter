@@ -75,7 +75,7 @@ def main():
                     # 稜線プロファイルのカンマ区切り文字列をfloatのリストに変換
                     horizon_profile_str = row.get('horizon_profile')
                     horizon_profile_list = None
-                    if horizon_profile_str and isinstance(horizon_profile_str, str):
+                    if horizon_profile_str and isinstance(horizon_profile_str, str) and ('nan' not in horizon_profile_str):
                         try:
                             horizon_profile_list = [float(val) for val in horizon_profile_str.split(',')]
                         except ValueError:
