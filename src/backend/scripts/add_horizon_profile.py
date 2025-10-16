@@ -1,6 +1,5 @@
 # scripts/add_horizon_profile.py
 
-import os
 import jismesh.utils as ju
 import numpy as np
 import rasterio
@@ -10,30 +9,19 @@ from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
 
+# backend/ をPythonの検索パスに追加（先に実行しないとappが見つからないよ．）
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from app.core.config import get_settings
+settings = get_settings()
+
+DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "観測候補地点"
+
 def get_meshcode_by_coord(lat, lon, n):
     """
     緯度・経度に対応するn次メッシュを返す．
     """
     return ju.to_meshcode(lat, lon, n)
-
-def get_dsm_filepath(tertiary_meshcode):
-    """
-    3次メッシュコードに対応するTIFFファイルのパスを返す．
-    """
-    # メッシュコードが3次メッシュであるか確認
-    if len(str(tertiary_meshcode)) != 8:
-        raise ValueError(f"Invalid tertiary meshcode: {tertiary_meshcode}. It must be 8 digits.")
-    
-    tertiary_meshcode = str(tertiary_meshcode)
-    first = tertiary_meshcode[0:4]
-    second = tertiary_meshcode[4:6]
-    third = tertiary_meshcode[6:]
-    path_dsm_tiff = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
-
-    if not os.path.exists(path_dsm_tiff):
-        return None
-    else:
-        return path_dsm_tiff
 
 def get_elevations_by_coords(coords: list[dict]) -> np.ndarray:
     """
@@ -51,7 +39,7 @@ def get_elevations_by_coords(coords: list[dict]) -> np.ndarray:
     # メッシュごとに標高データを取得
     elevations = np.full(len(coords), 0.0, dtype=float) # 結果を格納するリスト
     for meshcode, coords_with_indices in coords_by_meshcode.items():
-        path_dsm = get_dsm_filepath(tertiary_meshcode=meshcode)
+        path_dsm = settings.get_dem_filepath(tertiary_meshcode=meshcode)
         if path_dsm is None: # TIFFファイルが存在しなければ開く処理に進まない．
             continue
 
@@ -204,8 +192,6 @@ def calc_horizon_profile_parallel(
         horizon_profile = pool.map(calc_max_angle_for_single_azimuth, tasks)
     
     return np.array(horizon_profile), azimuths
-
-DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "観測候補地点"
 
 def main():
     print("稜線プロファイルをCSVに追記します．")

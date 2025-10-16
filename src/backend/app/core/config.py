@@ -27,8 +27,12 @@ class Settings(BaseSettings):
     POSTGRES_HOST: str = 'localhost' # ローカルスクリプト用のデフォルト値
     POSTGRES_DB: str
 
-    TLE_FILE_PATH_STATIONS: str
-    TLE_FILE_PATH_STARLINK: str
+    # データソース設定
+    LOCAL_DATA_ROOT: Path | None = None # .envのみに記載
+    S3_BUCKET: str | None = None
+
+    # 更新が確実に必要となるファイルは環境変数にして，config.pyの編集を減らす．
+    NIGHTTIME_LIGHT_FILENAME: str
 
     @computed_field
     @property
@@ -37,6 +41,58 @@ class Settings(BaseSettings):
         他のフィールドの値からDATABASE_URLを構築する．
         """
         return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
+    
+    @computed_field
+    @property
+    def PATH_TLE_STARLINK(self) -> str:
+        if self.S3_BUCKET:
+            return f"s3://{self.S3_BUCKET}/tles/sup-gp_starlink_latest.txt"
+        elif self.LOCAL_DATA_ROOT:
+            return str(self.LOCAL_DATA_ROOT / "tles" / "sup-gp_starlink_latest.txt")
+        else:
+            raise ValueError("データソースが設定されていません．")
+    
+    @computed_field
+    @property
+    def PATH_TLE_STATIONS(self) -> str:
+        if self.S3_BUCKET:
+            return f"s3://{self.S3_BUCKET}/tles/stations_latest.txt"
+        elif self.LOCAL_DATA_ROOT:
+            return str(self.LOCAL_DATA_ROOT / "tles" / "stations_latest.txt")
+        else:
+            raise ValueError("データソースが設定されていません．")
+
+    @computed_field
+    @property
+    def PATH_NIGHTTIME_LIGHT_TIFF(self) -> str:
+        if self.S3_BUCKET:
+            return f"s3://{self.S3_BUCKET}/nighttime_light/{self.NIGHTTIME_LIGHT_FILENAME}"
+        elif self.LOCAL_DATA_ROOT:
+            return str(self.LOCAL_DATA_ROOT / "nighttime_light" / self.NIGHTTIME_LIGHT_FILENAME)
+        else:
+            raise ValueError("データソースが設定されていません．")
+    
+    def get_dem_filepath(self, tertiary_meshcode: str) -> str | None:
+        """
+        3次メッシュコードに対応するTIFFファイルのパスを返す．
+        """
+        tertiary_meshcode = str(tertiary_meshcode)
+
+        # メッシュコードが8文字であるか確認
+        if len(tertiary_meshcode) != 8:
+            raise ValueError(f"Invalid tertiary meshcode: {tertiary_meshcode}. It must be 8 digits.")
+        
+        first = tertiary_meshcode[0:4]
+        second = tertiary_meshcode[4:6]
+        third = tertiary_meshcode[6:]
+
+        if self.S3_BUCKET:
+            return f"s3://{self.S3_BUCKET}/DEM1A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
+        elif self.LOCAL_DATA_ROOT:
+            path_dsm_tiff = self.LOCAL_DATA_ROOT / f"DEM1A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
+            return str(path_dsm_tiff) if path_dsm_tiff.exists() else None
+        else:
+            raise ValueError("データソースが設定されていません．")
 
     # システム環境変数が見つからなかった場合にココを参照
     class Config:

@@ -7,6 +7,12 @@ import pyproj
 import numpy as np
 from tqdm import tqdm
 
+# backend/ をPythonの検索パスに追加（先に実行しないとappが見つからないよ．）
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from app.core.config import get_settings
+settings = get_settings()
+
 DATA_DIR = Path(__file__).resolve().parents[2] / "data" / "観測候補地点"
 
 def calc_sky_glow_score(
@@ -93,7 +99,7 @@ def main():
             df = pd.read_csv(csv_path, encoding='utf-8', header=0)
             print(f"{len(df)}件のスポットの光害スコアを計算中...")
 
-            path_viirs_tiff = "/Volumes/iFile-1/satellite-spotter/VNL_npp_2024_global_vcmslcfg_v2_c202502261200.median_masked.dat.tif"
+            path_viirs_tiff = settings.PATH_NIGHTTIME_LIGHT_TIFF
 
             # tqdmとpandasを連携・プログレスバーの説明を設定
             tqdm.pandas(desc="Calculating Sky Glow Score")
