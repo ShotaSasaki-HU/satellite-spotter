@@ -1,6 +1,7 @@
 # app/routers/recommendations.py
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+from skyfield.api import load
 
 from app.db import session
 from app.schemas import event as schemas_event
@@ -25,6 +26,9 @@ def recommend_events(
     )
 
     # 2. スポットそれぞれについて観測イベントのリストを取得して統合
+    starlink_instances = load.tle(settings.PATH_TLE_STARLINK)
+    station_instances = load.tle(settings.PATH_TLE_STATIONS)
+
     unified_events = []
     for row in potential_spots:
         events_for_the_spot = get_events_for_the_coord(
@@ -33,7 +37,8 @@ def recommend_events(
             lon=row.lon,
             horizon_profile=row.horizon_profile,
             sky_glow_score=row.sky_glow_score,
-            settings=settings
+            starlink_instances=starlink_instances,
+            station_instances=station_instances
         )
         if events_for_the_spot:
             unified_events.extend(events_for_the_spot)

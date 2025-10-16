@@ -1,8 +1,6 @@
 # app/services/event_service.py
 from app.schemas.event import Event
-from app.core.config import Settings
 import numpy as np
-from skyfield.api import load
 import re
 from datetime import datetime
 
@@ -32,9 +30,7 @@ def calc_circular_std(rads: list) -> float:
     circular_std_rad = np.sqrt(-2 * np.log(r_bar))
     return circular_std_rad
 
-def get_potential_trains(path_tle: str, circular_std_threshold: float = 1.0):
-    sat_instances = load.tle(path_tle)
-
+def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
     # TLEに記載の衛星群を国際衛星識別番号でグルーピング
     launch_groups_with_instances = {} # {グループ名: [衛星インスタンスのリスト]}
     processed_intldesg = set() # 何故か load.tle() において同じ衛星が2重に読まれるため記録
@@ -85,9 +81,7 @@ def get_potential_trains(path_tle: str, circular_std_threshold: float = 1.0):
 
     return launch_groups_in_train_form
 
-def get_iss_as_a_group_member(path_tle: str, iss_intldesgs: list[str] = ['98067A', '21066A']):
-    sat_instances = load.tle(path_tle)
-
+def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A', '21066A']):
     for name, instance in sat_instances.items():
         intldesg = instance.model.intldesg # 国際衛星識別番号
         if intldesg in iss_intldesgs:
@@ -102,7 +96,8 @@ def get_events_for_the_coord(
         lon: float,
         horizon_profile: list[float] | None,
         sky_glow_score: float | None,
-        settings: Settings
+        starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
+        station_instances
     ) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
@@ -113,8 +108,8 @@ def get_events_for_the_coord(
     
     # 計算対象にする衛星の国際衛星識別符号を特定
     target_launch_groups = {}
-    target_launch_groups.update(get_potential_trains(path_tle=settings.PATH_TLE_STARLINK))
-    target_launch_groups.update(get_iss_as_a_group_member(path_tle=settings.PATH_TLE_STATIONS))
+    target_launch_groups.update(get_potential_trains(sat_instances=starlink_instances))
+    target_launch_groups.update(get_iss_as_a_group_member(sat_instances=station_instances))
 
     # 打ち上げグループごとにイベントを計算
 
