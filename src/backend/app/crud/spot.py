@@ -38,7 +38,7 @@ def get_top_spots_by_static_score(
             (max_sqm - min_sqm) > 0,
             (Spot.sqm_value - min_sqm) / (max_sqm - min_sqm)
         ),
-        else_=1.0 # 全て同じ値だった場合（太平洋上など）はスコア1とする．
+        else_=1.0 # 全て同じ値だった場合はスコア1とする．
     )
 
     # C. 最終的な静的スコアの計算式
@@ -61,7 +61,7 @@ def get_top_spots_by_static_score(
             )
         )
         .add_columns(final_static_score)
-        .order_by(final_static_score.desc())
+        .order_by(final_static_score.desc().nulls_last()) # デフォルトでは，NULLが先頭に来る．
         .limit(limit)
     )
 
