@@ -140,7 +140,7 @@ def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph)
     
     return visible_events
 
-def score_event(pass_event, satellite, spot_pos, horizon_profile, sky_glow_score):
+def score_event(pass_event, satellite, spot_pos, horizon_profile, sqm_value):
     """
     1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
     """
@@ -153,7 +153,7 @@ def get_events_for_the_coord(
         lat: float,
         lon: float,
         horizon_profile: list[float] | None,
-        sky_glow_score: float | None,
+        sqm_value: float | None,
         elevation_m: float | None,
         starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
         station_instances) -> list[Event]:
@@ -161,7 +161,7 @@ def get_events_for_the_coord(
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
     # バッチ処理済みのスポットであるにも関わらず，静的スコアが欠損している場合はスキップする．
-    if location_name and (not horizon_profile or not sky_glow_score):
+    if location_name and (not horizon_profile or not sqm_value):
         return []
     
     # 計算対象にする衛星の国際衛星識別符号を特定
