@@ -6,12 +6,11 @@ from geoalchemy2.functions import ST_DWithin
 from geoalchemy2.types import Geometry
 
 def get_top_spots_by_static_score(
-    db: Session,
-    lat: float,
-    lon: float,
-    radius_km: int,
-    limit: int = 10 # ページネーションではなく，足切り用．
-) -> list[Spot]:
+        db: Session,
+        lat: float,
+        lon: float,
+        radius_km: int,
+        limit: int = 10) -> list[Spot]:
     """
     指定された中心座標から半径内にあるスポットを検索する．
     """
@@ -29,15 +28,15 @@ def get_top_spots_by_static_score(
 
     # B. 光害スコアの正規化式
     min_max_values = db.query(
-        func.min(Spot.sky_glow_score),
-        func.max(Spot.sky_glow_score)
+        func.min(Spot.sqm_value),
+        func.max(Spot.sqm_value)
     ).one()
-    min_sg_score, max_sg_score = min_max_values
-    # （最大 - 最小）が０になるケースを避けるため，caseで保護する．
+    min_sqm, max_sqm = min_max_values
+    # （最大 - 最小）がゼロになるケースを避けるため，caseで保護する．
     sky_glow_score_expr = case(
         (
-            (max_sg_score - min_sg_score) > 0,
-            1.0 - ((Spot.sky_glow_score - min_sg_score) / (max_sg_score - min_sg_score))
+            (max_sqm - min_sqm) > 0,
+            (Spot.sqm_value - min_sqm) / (max_sqm - min_sqm)
         ),
         else_=1.0 # 全て同じ値だった場合（太平洋上など）はスコア1とする．
     )
@@ -51,7 +50,7 @@ def get_top_spots_by_static_score(
             cast(Spot.geom, Geometry).ST_Y().label('lat'),
             cast(Spot.geom, Geometry).ST_X().label('lon'),
             Spot.horizon_profile.label('horizon_profile'),
-            Spot.sky_glow_score.label('sky_glow_score'),
+            Spot.sqm_value.label('sqm_value'),
             Spot.elevation_m.label('elevation_m')
         )
         .filter(

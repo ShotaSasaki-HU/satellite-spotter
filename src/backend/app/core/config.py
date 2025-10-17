@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     S3_BUCKET: str | None = None
 
     # 更新が確実に必要となるファイルは環境変数にして，config.pyの編集を減らす．
-    NIGHTTIME_LIGHT_FILENAME: str
+    # 今の所，そのようなファイルはなし．
 
     @computed_field
     @property
@@ -64,11 +64,11 @@ class Settings(BaseSettings):
 
     @computed_field
     @property
-    def PATH_NIGHTTIME_LIGHT_TIFF(self) -> str:
+    def PATH_WORLD_ATLAS_2015_TIFF(self) -> str:
         if self.S3_BUCKET:
-            return f"s3://{self.S3_BUCKET}/nighttime_light/{self.NIGHTTIME_LIGHT_FILENAME}"
+            return f"s3://{self.S3_BUCKET}/World_Atlas_2015/World_Atlas_2015.tif"
         elif self.LOCAL_DATA_ROOT:
-            return str(self.LOCAL_DATA_ROOT / "nighttime_light" / self.NIGHTTIME_LIGHT_FILENAME)
+            return str(self.LOCAL_DATA_ROOT / "World_Atlas_2015" / "World_Atlas_2015.tif")
         else:
             raise ValueError("データソースが設定されていません．")
     

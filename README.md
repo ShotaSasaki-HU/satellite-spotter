@@ -52,7 +52,7 @@
 - 光害スコア
     - 手法（改善前）：~~Suomi-NPP衛星によるVIIRS夜間光画像データを利用し，都市の光が夜空の暗さに与える影響を独自に数値化．~~
     - 手法（改善後）：World Atlas 2015のデータを採用．このデータセットは，VIIRSのデータ等を基にしたモデルによって「地上から見た夜空の明るさ」を計算したものであり，より現実に則した光害の評価が可能．World Atlas 2015の輝度データ（mcd/m²）を，SQM（等級/平方秒角）に変換して光害をスコアリング．
-    - 成果物：`PoC/VIIRS_Nighttime_Light/sky_glow_score.py`
+    - 成果物：`PoC/SQM/calc_sqm_by_world_atlas_2015_dataset.py`，`PoC/VIIRS_Nighttime_Light/sky_glow_score.py`
 
 - 気象スコア
     - 手法：Open-Meteo APIから取得した気象予報（降水・雲量・視程）を基に，観測当日の空の状態をスコアリング．

@@ -74,11 +74,11 @@ def main():
                             print(f"警告: osm_id {osm_id} のhorizon_profileのパースに失敗しました。")
                             horizon_profile_list = None
 
-                    # 光害スコアをfloatに変換
+                    # SQM値をfloatに変換
                     try:
-                        sky_glow_score = float(row.get('sky_glow_score')) if row.get('sky_glow_score') else None
+                        sqm_value= float(row.get('sqm_value')) if row.get('sqm_value') else None
                     except (ValueError, TypeError):
-                        sky_glow_score = None
+                        sqm_value = None
                     
                     # 標高をfloatに変換
                     try:
@@ -93,7 +93,7 @@ def main():
                         'geom': point_geom, # POINTのWKT文字列をセット
                         'polygon_geom': polygon_geom, # POLYGONのWKT文字列またはNoneをセット
                         'horizon_profile': horizon_profile_list,
-                        'sky_glow_score': sky_glow_score,
+                        'sqm_value': sqm_value,
                         'elevation_m': elevation_m
                     }
                     spots_to_create.append(spot_data)
