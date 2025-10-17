@@ -8,12 +8,14 @@ services:
       - "8080:80" # PCの8080番をコンテナの80番に接続
     volumes:
       - ./backend:/app # ソースコードの同期
+      - ${LOCAL_DATA_ROOT}:/data # PCの外付けSSDのパスをコンテナ内の/dataディレクトリとしてマウント
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_HOST=db
       - POSTGRES_DB=${POSTGRES_DB}
-      - LOCAL_DATA_ROOT=${LOCAL_DATA_ROOT}
+      - LOCAL_DATA_ROOT=/data # コンテナ内でのデータルートパスを環境変数として上書き
+      - S3_BUCKET=${S3_BUCKET}
     depends_on:
       - db # dbサービスが起動してからapiサービスを起動する．
   
