@@ -1,11 +1,10 @@
 # app/services/event_service.py
 from app.schemas.event import Event
-from app.schemas.trajectory import TrajectorySummary
 import numpy as np
 import re
 from skyfield.api import Topos, load
 from skyfield.sgp4lib import EarthSatellite
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 
 def calc_circular_std(rads: list) -> float:
@@ -96,68 +95,57 @@ def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A
 
     return {}
 
-def get_visible_events_for_groups(
-        group_to_sats: dict[str, list[EarthSatellite]],
-        lat: float,
-        lon: float,
-        elevation_m: float,
-        days: int = 7
-    ) -> dict[str, list[TrajectorySummary]]:
-    # 処理の軽量化のためグループごとに適当な1機を抽出
-    group_to_representative_sat = {group_name: instances[0] for group_name, instances in group_to_sats.items()}
+def get_raw_pass_events(satellite: EarthSatellite, spot_pos,
+                        t0, t1, min_required_alt_deg = 10.0) -> list[dict]:
+    """
+    1つの衛星について，指定期間内の生の通過イベントを抽出する．
+    """
+    t, events = satellite.find_events(spot_pos, t0, t1, altitude_degrees=min_required_alt_deg)
 
-    # 打ち上げグループごとにイベントを計算
-    ts = load.timescale()
-    t0 = ts.now()
-    t1 = ts.utc(t0.utc_datetime() + timedelta(days=days))
+    # イベントを「昇る（0）」「天頂（１）」「沈む（２）」の組にまとめる．
+    pass_events = []
+    current_pass = {}
+    for ti, event_code in zip(t, events):
+        if event_code == 0:
+            current_pass = {'rise_time': ti}
+        elif event_code == 1:
+            current_pass['peak_time'] = ti
+        elif event_code == 2:
+            current_pass['set_time'] = ti
+            pass_events.append(current_pass)
+            current_pass = {}
 
-    # 観測者の位置は，ライブラリの設定の関係から，測心座標で設定する．（earth + Topos にはしない．）
-    spot_pos = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
+    return pass_events
 
-    eph = load('de421.bsp')
+def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph) -> list[dict]:
+    """
+    天文学的な条件（観測地点の暗さ・衛星の被照）でイベントを絞り込む．
+    """
+    visible_events = []
     sun, earth = eph['sun'], eph['earth']
 
-    trajectories_by_launch_group = {}
-    for group_name, representative_sat in group_to_representative_sat.items():
-        # 衛星の最大仰角（altitude_degrees）が10度以上になるパスを検索
-        t, events = representative_sat.find_events(spot_pos, t0, t1, altitude_degrees=10.0)
+    for pass_event in pass_events:
+        # 昇りのタイムスタンプが存在するか？（無ければ既に昇り始めてしまっている．）
+        has_rise_timestamp = pass_event.get('rise_time', None)
 
+        # 「太陽高度が-6度以下」かつ「衛星が太陽光に照らされている」瞬間があるか？
+        t = pass_event.values()
         sun_alt = (earth + spot_pos).at(t).observe(sun).apparent().altaz()[0].degrees # 太陽高度のリスト
-        sun_lit = representative_sat.at(t).is_sunlit(eph) # 衛星に太陽光が当たっているかの真偽値のリスト
+        is_dark_enough = np.array([s_alt <= -6.0 for s_alt in sun_alt]) # 太陽高度が-6度以下であるかの真偽値リスト
+        is_sun_lit = np.array(satellite.at(t).is_sunlit(eph)) # 衛星に太陽光が当たっているかの真偽値リスト
+        bright_moment_exists = any(is_bright_moment for is_bright_moment in is_dark_enough & is_sun_lit)
 
-        trajectories_for_current_sat: list[TrajectorySummary] = []
-        pre_event_num = 999
-        current_trajectory: TrajectorySummary | None = None
-        for ti, event, s_alt, s_lit in zip(t, events, sun_alt, sun_lit):
-            if event < pre_event_num:
-                if current_trajectory:
-                    trajectories_for_current_sat.append(current_trajectory)
-                current_trajectory = TrajectorySummary()
-                
-            current_trajectory.list_timestamp_utc[event] = ti.utc_datetime()
-            current_trajectory.list_sun_alt[event] = s_alt
-            current_trajectory.list_sun_lit[event] = s_lit
-                
-            pre_event_num = event
-        trajectories_for_current_sat.append(current_trajectory) # 最後の軌跡を追加
-
-        # フィルタ
-        filtered_trajectories = []
-        for trajectory in trajectories_for_current_sat:
-            # タイムスタンプが3つ全て揃っているか？（揃っていないイベントは既に始まってしまっているため．）
-            has_all_timestamps = all(timestamp for timestamp in trajectory.list_timestamp_utc)
-            # 太陽高度が-6度以下になる瞬間があるか？
-            is_dark_enough = any(s_alt < -6.0 for s_alt in trajectory.list_sun_alt)
-            # 衛星が太陽光に照らされている瞬間があるか？
-            is_sunlit = any(sun_lit for sun_lit in trajectory.list_sun_lit)
-
-            # 全ての条件を満たす場合のみ、新しいリストに追加
-            if has_all_timestamps and is_dark_enough and is_sunlit:
-                filtered_trajectories.append(trajectory)
-            
-        trajectories_by_launch_group[group_name] = filtered_trajectories
+        if has_rise_timestamp and bright_moment_exists:
+            visible_events.append(pass_event)
     
-    return trajectories_by_launch_group
+    return visible_events
+
+def score_event(pass_event, satellite, spot_pos, horizon_profile, sky_glow_score):
+    """
+    1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
+    """
+
+    return
 
 @lru_cache(maxsize=128)
 def get_events_for_the_coord(
@@ -168,8 +156,7 @@ def get_events_for_the_coord(
         sky_glow_score: float | None,
         elevation_m: float | None,
         starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
-        station_instances
-    ) -> list[Event]:
+        station_instances) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
@@ -178,16 +165,32 @@ def get_events_for_the_coord(
         return []
     
     # 計算対象にする衛星の国際衛星識別符号を特定
-    target_launch_groups = {}
-    target_launch_groups.update(get_potential_trains(sat_instances=starlink_instances))
-    target_launch_groups.update(get_iss_as_a_group_member(sat_instances=station_instances))
+    launch_groups_to_sats = {}
+    launch_groups_to_sats.update(get_potential_trains(sat_instances=starlink_instances))
+    launch_groups_to_sats.update(get_iss_as_a_group_member(sat_instances=station_instances))
 
-    visible_events_for_groups = get_visible_events_for_groups(
-        group_to_sats=target_launch_groups,
-        lat=lat,
-        lon=lon,
-        elevation_m=elevation_m,
-        days=7
-    )
+    # 時刻・検索期間設定
+    ts = load.timescale()
+    t0 = ts.now() + timedelta(days=0, hours=0, minutes=40)
+    t1 = ts.utc(t0.utc_datetime() + timedelta(days=7))
+    tz = timezone(timedelta(hours=9))
+
+    # 観測値設定
+    spot_pos = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
+
+    # 天体暦設定
+    eph = load('de421.bsp')
+
+    for group_name, instances in launch_groups_to_sats.items():
+        representative_sat = instances[0] # 処理の軽量化のため代表衛星を適当に定義
+
+        # 生の天球イベントを取得
+        raw_passes = get_raw_pass_events(satellite=representative_sat, spot_pos=spot_pos, t0=t0, t1=t1)
+        # 天文学的条件でフィルタ
+        visible_passes = filter_visible_events(pass_events=raw_passes, satellite=representative_sat,
+                                               spot_pos=spot_pos, eph=eph)
+        
+        for pass_event in visible_passes:
+            pass
 
     return
