@@ -1,10 +1,11 @@
 # app/services/event_service.py
 from app.schemas.event import Event
-from app.schemas.trajectory import SingleTrajectory
+from app.schemas.trajectory import TrajectorySummary
 import numpy as np
 import re
 from skyfield.api import Topos, load
-from datetime import datetime, timedelta, timezone
+from skyfield.sgp4lib import EarthSatellite
+from datetime import datetime, timedelta
 from functools import lru_cache
 
 def calc_circular_std(rads: list) -> float:
@@ -95,37 +96,20 @@ def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A
 
     return {}
 
-@lru_cache(maxsize=128)
-def get_events_for_the_coord(
-        location_name: str | None, # スポット以外の場合に渡す事を禁ずる．
+def get_visible_events_for_groups(
+        group_to_sats: dict[str, list[EarthSatellite]],
         lat: float,
         lon: float,
-        horizon_profile: list[float] | None,
-        sky_glow_score: float | None,
-        elevation_m: float | None,
-        starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
-        station_instances
-    ) -> list[Event]:
-    """
-    単一の座標に対して，観測可能なイベントのリストを取得する．
-    """
-    # バッチ処理済みのスポットであるにも関わらず，静的スコアが欠損している場合はスキップする．
-    if location_name and (not horizon_profile or not sky_glow_score):
-        return []
-    
-    # 計算対象にする衛星の国際衛星識別符号を特定
-    target_launch_groups = {}
-    target_launch_groups.update(get_potential_trains(sat_instances=starlink_instances))
-    target_launch_groups.update(get_iss_as_a_group_member(sat_instances=station_instances))
-
+        elevation_m: float,
+        days: int = 7
+    ) -> dict[str, list[TrajectorySummary]]:
     # 処理の軽量化のためグループごとに適当な1機を抽出
-    group_to_representative_sat = {group_name: instances[0] for group_name, instances in target_launch_groups.items()}
+    group_to_representative_sat = {group_name: instances[0] for group_name, instances in group_to_sats.items()}
 
     # 打ち上げグループごとにイベントを計算
     ts = load.timescale()
     t0 = ts.now()
-    t1 = ts.utc(t0.utc_datetime() + timedelta(days=7))
-    # tz = timezone(timedelta(hours=9))
+    t1 = ts.utc(t0.utc_datetime() + timedelta(days=days))
 
     # 観測者の位置は，ライブラリの設定の関係から，測心座標で設定する．（earth + Topos にはしない．）
     spot_pos = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
@@ -141,14 +125,14 @@ def get_events_for_the_coord(
         sun_alt = (earth + spot_pos).at(t).observe(sun).apparent().altaz()[0].degrees # 太陽高度のリスト
         sun_lit = representative_sat.at(t).is_sunlit(eph) # 衛星に太陽光が当たっているかの真偽値のリスト
 
-        trajectories_for_current_sat: list[SingleTrajectory] = []
+        trajectories_for_current_sat: list[TrajectorySummary] = []
         pre_event_num = 999
-        current_trajectory: SingleTrajectory | None = None
+        current_trajectory: TrajectorySummary | None = None
         for ti, event, s_alt, s_lit in zip(t, events, sun_alt, sun_lit):
             if event < pre_event_num:
                 if current_trajectory:
                     trajectories_for_current_sat.append(current_trajectory)
-                current_trajectory = SingleTrajectory()
+                current_trajectory = TrajectorySummary()
                 
             current_trajectory.list_timestamp_utc[event] = ti.utc_datetime()
             current_trajectory.list_sun_alt[event] = s_alt
@@ -172,5 +156,38 @@ def get_events_for_the_coord(
                 filtered_trajectories.append(trajectory)
             
         trajectories_by_launch_group[group_name] = filtered_trajectories
+    
+    return trajectories_by_launch_group
+
+@lru_cache(maxsize=128)
+def get_events_for_the_coord(
+        location_name: str | None, # スポット以外の場合に渡す事を禁ずる．
+        lat: float,
+        lon: float,
+        horizon_profile: list[float] | None,
+        sky_glow_score: float | None,
+        elevation_m: float | None,
+        starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
+        station_instances
+    ) -> list[Event]:
+    """
+    単一の座標に対して，観測可能なイベントのリストを取得する．
+    """
+    # バッチ処理済みのスポットであるにも関わらず，静的スコアが欠損している場合はスキップする．
+    if location_name and (not horizon_profile or not sky_glow_score):
+        return []
+    
+    # 計算対象にする衛星の国際衛星識別符号を特定
+    target_launch_groups = {}
+    target_launch_groups.update(get_potential_trains(sat_instances=starlink_instances))
+    target_launch_groups.update(get_iss_as_a_group_member(sat_instances=station_instances))
+
+    visible_events_for_groups = get_visible_events_for_groups(
+        group_to_sats=target_launch_groups,
+        lat=lat,
+        lon=lon,
+        elevation_m=elevation_m,
+        days=7
+    )
 
     return
