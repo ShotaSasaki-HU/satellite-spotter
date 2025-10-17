@@ -19,3 +19,5 @@ class Spot(Base):
     # 時間的に変化しない静的な評価指標
     horizon_profile = Column(ARRAY(Float), nullable=True)
     sky_glow_score = Column(Float, nullable=True)
+
+    elevation_m = Column(Float, nullable=True) # 標高（m）

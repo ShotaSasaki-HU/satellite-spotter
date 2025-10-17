@@ -2,7 +2,8 @@
 from app.schemas.event import Event
 import numpy as np
 import re
-from datetime import datetime
+from skyfield.api import Topos, load
+from datetime import timedelta, timezone
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -35,7 +36,7 @@ def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
     launch_groups_with_instances = {} # {グループ名: [衛星インスタンスのリスト]}
     processed_intldesg = set() # 何故か load.tle() において同じ衛星が2重に読まれるため記録
 
-    for name, instance in sat_instances.items():
+    for instance in sat_instances.values():
         intldesg = instance.model.intldesg # 国際衛星識別番号
         if intldesg in processed_intldesg:
             continue
@@ -82,7 +83,7 @@ def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
     return launch_groups_in_train_form
 
 def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A', '21066A']):
-    for name, instance in sat_instances.items():
+    for instance in sat_instances.values():
         intldesg = instance.model.intldesg # 国際衛星識別番号
         if intldesg in iss_intldesgs:
             launch_group = re.search(r'\d+', intldesg).group()
@@ -112,5 +113,15 @@ def get_events_for_the_coord(
     target_launch_groups.update(get_iss_as_a_group_member(sat_instances=station_instances))
 
     # 打ち上げグループごとにイベントを計算
+    ts = load.timescale()
+    t0 = ts.now()
+    t1 = ts.utc(t0.utc_datetime() + timedelta(days=1))
+    tz = timezone(timedelta(hours=9))
+
+    spot = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=100)
+
+    trajectories_grouped_by_launch = []
+    for group_name, instances in target_launch_groups.items():
+        t, events = starlink_instances[0].find_events(osaka, t0, t1, altitude_degrees=10.0)
 
     return

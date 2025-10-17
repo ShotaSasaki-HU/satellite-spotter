@@ -80,6 +80,12 @@ def main():
                     except (ValueError, TypeError):
                         sky_glow_score = None
                     
+                    # 標高をfloatに変換
+                    try:
+                        elevation_m = float(row.get('elevation_m')) if row.get('elevation_m') else None
+                    except (ValueError, TypeError):
+                        elevation_m = None
+                    
                     spot_data = {
                         'osm_id': osm_id,
                         'name': row.get('name', 'N/A'),
@@ -88,6 +94,7 @@ def main():
                         'polygon_geom': polygon_geom, # POLYGONのWKT文字列またはNoneをセット
                         'horizon_profile': horizon_profile_list,
                         'sky_glow_score': sky_glow_score,
+                        'elevation_m': elevation_m
                     }
                     spots_to_create.append(spot_data)
         
