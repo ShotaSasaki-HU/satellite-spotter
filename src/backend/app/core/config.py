@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
 
     # データソース設定
-    LOCAL_DATA_ROOT: Path | None = None # .envのみに記載
+    LOCAL_DATA_ROOT: Path | None = None
     S3_BUCKET: str | None = None
 
     # 更新が確実に必要となるファイルは環境変数にして，config.pyの編集を減らす．
