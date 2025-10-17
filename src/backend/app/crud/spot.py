@@ -51,7 +51,8 @@ def get_top_spots_by_static_score(
             cast(Spot.geom, Geometry).ST_Y().label('lat'),
             cast(Spot.geom, Geometry).ST_X().label('lon'),
             Spot.horizon_profile.label('horizon_profile'),
-            Spot.sky_glow_score.label('sky_glow_score')
+            Spot.sky_glow_score.label('sky_glow_score'),
+            Spot.elevation_m.label('elevation_m')
         )
         .filter(
             ST_DWithin(

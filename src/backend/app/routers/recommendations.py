@@ -37,6 +37,7 @@ def recommend_events(
             lon=row.lon,
             horizon_profile=row.horizon_profile,
             sky_glow_score=row.sky_glow_score,
+            elevation_m=row.elevation_m,
             starlink_instances=starlink_instances,
             station_instances=station_instances
         )

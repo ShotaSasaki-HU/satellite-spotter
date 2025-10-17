@@ -1,9 +1,11 @@
 # app/services/event_service.py
 from app.schemas.event import Event
+from app.schemas.trajectory import SingleTrajectory
 import numpy as np
 import re
 from skyfield.api import Topos, load
-from datetime import timedelta, timezone
+from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -31,6 +33,7 @@ def calc_circular_std(rads: list) -> float:
     circular_std_rad = np.sqrt(-2 * np.log(r_bar))
     return circular_std_rad
 
+@lru_cache
 def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
     # TLEに記載の衛星群を国際衛星識別番号でグルーピング
     launch_groups_with_instances = {} # {グループ名: [衛星インスタンスのリスト]}
@@ -82,6 +85,7 @@ def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
 
     return launch_groups_in_train_form
 
+@lru_cache
 def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A', '21066A']):
     for instance in sat_instances.values():
         intldesg = instance.model.intldesg # 国際衛星識別番号
@@ -91,12 +95,14 @@ def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A
 
     return {}
 
+@lru_cache(maxsize=128)
 def get_events_for_the_coord(
         location_name: str | None, # スポット以外の場合に渡す事を禁ずる．
         lat: float,
         lon: float,
         horizon_profile: list[float] | None,
         sky_glow_score: float | None,
+        elevation_m: float | None,
         starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
         station_instances
     ) -> list[Event]:
@@ -112,16 +118,59 @@ def get_events_for_the_coord(
     target_launch_groups.update(get_potential_trains(sat_instances=starlink_instances))
     target_launch_groups.update(get_iss_as_a_group_member(sat_instances=station_instances))
 
+    # 処理の軽量化のためグループごとに適当な1機を抽出
+    group_to_representative_sat = {group_name: instances[0] for group_name, instances in target_launch_groups.items()}
+
     # 打ち上げグループごとにイベントを計算
     ts = load.timescale()
     t0 = ts.now()
-    t1 = ts.utc(t0.utc_datetime() + timedelta(days=1))
-    tz = timezone(timedelta(hours=9))
+    t1 = ts.utc(t0.utc_datetime() + timedelta(days=7))
+    # tz = timezone(timedelta(hours=9))
 
-    spot = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=100)
+    # 観測者の位置は，ライブラリの設定の関係から，測心座標で設定する．（earth + Topos にはしない．）
+    spot_pos = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
 
-    trajectories_grouped_by_launch = []
-    for group_name, instances in target_launch_groups.items():
-        t, events = starlink_instances[0].find_events(osaka, t0, t1, altitude_degrees=10.0)
+    eph = load('de421.bsp')
+    sun, earth = eph['sun'], eph['earth']
+
+    trajectories_by_launch_group = {}
+    for group_name, representative_sat in group_to_representative_sat.items():
+        # 衛星の最大仰角（altitude_degrees）が10度以上になるパスを検索
+        t, events = representative_sat.find_events(spot_pos, t0, t1, altitude_degrees=10.0)
+
+        sun_alt = (earth + spot_pos).at(t).observe(sun).apparent().altaz()[0].degrees # 太陽高度のリスト
+        sun_lit = representative_sat.at(t).is_sunlit(eph) # 衛星に太陽光が当たっているかの真偽値のリスト
+
+        trajectories_for_current_sat: list[SingleTrajectory] = []
+        pre_event_num = 999
+        current_trajectory: SingleTrajectory | None = None
+        for ti, event, s_alt, s_lit in zip(t, events, sun_alt, sun_lit):
+            if event < pre_event_num:
+                if current_trajectory:
+                    trajectories_for_current_sat.append(current_trajectory)
+                current_trajectory = SingleTrajectory()
+                
+            current_trajectory.list_timestamp_utc[event] = ti.utc_datetime()
+            current_trajectory.list_sun_alt[event] = s_alt
+            current_trajectory.list_sun_lit[event] = s_lit
+                
+            pre_event_num = event
+        trajectories_for_current_sat.append(current_trajectory) # 最後の軌跡を追加
+
+        # フィルタ
+        filtered_trajectories = []
+        for trajectory in trajectories_for_current_sat:
+            # タイムスタンプが3つ全て揃っているか？（揃っていないイベントは既に始まってしまっているため．）
+            has_all_timestamps = all(timestamp for timestamp in trajectory.list_timestamp_utc)
+            # 太陽高度が-6度以下になる瞬間があるか？
+            is_dark_enough = any(s_alt < -6.0 for s_alt in trajectory.list_sun_alt)
+            # 衛星が太陽光に照らされている瞬間があるか？
+            is_sunlit = any(sun_lit for sun_lit in trajectory.list_sun_lit)
+
+            # 全ての条件を満たす場合のみ、新しいリストに追加
+            if has_all_timestamps and is_dark_enough and is_sunlit:
+                filtered_trajectories.append(trajectory)
+            
+        trajectories_by_launch_group[group_name] = filtered_trajectories
 
     return
