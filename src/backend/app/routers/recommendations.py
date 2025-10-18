@@ -35,11 +35,12 @@ def recommend_events(
             location_name=row.name,
             lat=row.lat,
             lon=row.lon,
+            elevation_m=row.elevation_m,
             horizon_profile=row.horizon_profile,
             sqm_value=row.sqm_value,
-            elevation_m=row.elevation_m,
             starlink_instances=starlink_instances,
-            station_instances=station_instances
+            station_instances=station_instances,
+            settings=settings
         )
         if events_for_the_spot:
             unified_events.extend(events_for_the_spot)

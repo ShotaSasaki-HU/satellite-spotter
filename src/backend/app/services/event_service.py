@@ -1,11 +1,12 @@
 # app/services/event_service.py
-from app.schemas.event import Event
 import numpy as np
 import re
-from skyfield.api import Topos, load
-from skyfield.sgp4lib import EarthSatellite
+from skyfield.api import Topos, load, EarthSatellite
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
+from app.schemas.event import Event
+from app.core.config import Settings
+from app.services.dem_service import get_elevations_by_coords
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -125,44 +126,41 @@ def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph)
     sun, earth = eph['sun'], eph['earth']
 
     for pass_event in pass_events:
-        # 昇りのタイムスタンプが存在するか？（無ければ既に昇り始めてしまっている．）
-        has_rise_timestamp = pass_event.get('rise_time', None)
+        # 3つ全てのタイムスタンプが存在するか？（欠けているとスコアリングが困難）
+        has_full_timestamp = len(pass_event) == 3
 
         # 「太陽高度が-6度以下」かつ「衛星が太陽光に照らされている」瞬間があるか？
         t = pass_event.values()
         sun_alt = (earth + spot_pos).at(t).observe(sun).apparent().altaz()[0].degrees # 太陽高度のリスト
-        is_dark_enough = np.array([s_alt <= -6.0 for s_alt in sun_alt]) # 太陽高度が-6度以下であるかの真偽値リスト
-        is_sun_lit = np.array(satellite.at(t).is_sunlit(eph)) # 衛星に太陽光が当たっているかの真偽値リスト
-        bright_moment_exists = any(is_bright_moment for is_bright_moment in is_dark_enough & is_sun_lit)
+        is_dark_enough = sun_alt <= -6 # 太陽高度が-6度以下であるかの真偽値リスト
+        is_sun_lit = satellite.at(t).is_sunlit(eph) # 衛星に太陽光が当たっているかの真偽値リスト
+        bright_moment_exists = any(is_bright_moment for is_bright_moment in (is_dark_enough & is_sun_lit))
 
-        if has_rise_timestamp and bright_moment_exists:
+        if has_full_timestamp and bright_moment_exists:
             visible_events.append(pass_event)
     
     return visible_events
-
-def score_event(pass_event, satellite, spot_pos, horizon_profile, sqm_value):
-    """
-    1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
-    """
-
-    return
 
 @lru_cache(maxsize=128)
 def get_events_for_the_coord(
         location_name: str | None, # スポット以外の場合に渡す事を禁ずる．
         lat: float,
         lon: float,
-        horizon_profile: list[float] | None,
-        sqm_value: float | None,
-        elevation_m: float | None,
-        starlink_instances, # この関数はルーターから繰り返し呼ばれるため，ファイルI/Oはルーターに任せる．
-        station_instances) -> list[Event]:
+        elevation_m: float,
+        horizon_profile: list[float],
+        sqm_value: float,
+        starlink_instances, # ファイルI/Oはルーターに任せる．
+        station_instances,
+        settings: Settings) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
     # バッチ処理済みのスポットであるにも関わらず，静的スコアが欠損している場合はスキップする．
-    if location_name and (not horizon_profile or not sqm_value):
+    if location_name and (not horizon_profile or not sqm_value or not elevation_m):
         return []
+    
+    if not location_name:
+        elevation_m = get_elevations_by_coords(coords=[{'lat': lat, 'lon': lon}], settings=settings)[0]
     
     # 計算対象にする衛星の国際衛星識別符号を特定
     launch_groups_to_sats = {}
