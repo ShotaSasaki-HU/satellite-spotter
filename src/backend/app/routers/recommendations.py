@@ -39,8 +39,7 @@ def recommend_events(
             horizon_profile=row.horizon_profile,
             sqm_value=row.sqm_value,
             starlink_instances=starlink_instances,
-            station_instances=station_instances,
-            settings=settings
+            station_instances=station_instances
         )
         if events_for_the_spot:
             unified_events.extend(events_for_the_spot)

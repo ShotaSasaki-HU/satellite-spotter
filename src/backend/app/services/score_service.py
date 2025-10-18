@@ -59,12 +59,21 @@ def calc_event_score(
     """
     1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
     """
+    scores = {}
+
     # 可視時間割合
+    visible_time_ratio = calc_visible_time_ratio(pass_event=pass_event, satellite=satellite, spot_pos=spot_pos,
+                                                 horizon_profile=horizon_profile, ts=ts, eph=eph)
+    scores['visible_time_ratio'] = visible_time_ratio
 
     # 光害スコア（SQM値とボートル・スケールにより夜空の暗さを評価）
 
     # 月相スコア（月の満ち欠け）
 
     # 気象スコア（観測日時における降水・雲量・視程の予報スコア）
+
+    # 最終スコアの計算（全スコアの総積）
+    visibility = np.prod(np.array(scores.values()))
+    scores['visibility'] = visibility
 
     return
