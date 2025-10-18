@@ -34,7 +34,7 @@ def get_elevations_by_coords(coords: list[dict]) -> np.ndarray:
         coords_by_meshcode[meshcode].append((coord['lon'], coord['lat'], i))
     
     # メッシュごとに標高データを取得
-    elevations = np.full(len(coords), 0.0, dtype=float) # 結果を格納するリスト
+    elevations = np.full(len(coords), np.nan, dtype=float) # 結果を格納するリスト
     for meshcode, coords_with_indices in coords_by_meshcode.items():
         path_dsm = settings.get_dem_filepath(tertiary_meshcode=meshcode)
         if path_dsm is None: # TIFFファイルが存在しなければ開く処理に進まない．
@@ -59,7 +59,7 @@ def main():
         for csv_path in sorted(DATA_DIR.rglob("*.csv")):
             print(f"{csv_path} を処理中...")
             df = pd.read_csv(csv_path, encoding='utf-8', header=0)
-            print(f"{len(df)}件のスポットの光害スコアを計算中...")
+            print(f"{len(df)}件のスポットの標高値を計算中...")
 
             # tqdmとpandasを連携・プログレスバーの説明を設定
             tqdm.pandas(desc="Calculating Elevation")
