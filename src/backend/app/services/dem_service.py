@@ -26,7 +26,7 @@ def get_elevations_by_coords(coords: list[dict], settings: Settings) -> np.ndarr
         coords_by_meshcode[meshcode].append((coord['lon'], coord['lat'], i))
     
     # メッシュごとに標高データを取得
-    elevations = np.full(len(coords), 0.0, dtype=float) # 結果を格納するリスト
+    elevations = np.full(len(coords), np.nan, dtype=float) # 結果を格納するリスト
     for meshcode, coords_with_indices in coords_by_meshcode.items():
         path_dsm = settings.get_dem_filepath(tertiary_meshcode=meshcode)
         if path_dsm is None: # TIFFファイルが存在しなければ開く処理に進まない．
@@ -112,6 +112,7 @@ def calc_max_angle_for_single_azimuth(args):
 
     coords = [{'lat': lat, 'lon': lon} for lat, lon in zip(lats, lons)]
     elevations = get_elevations_by_coords(coords=coords, settings=settings)
+    elevations[np.isnan(elevations)] = 0.0
 
     # 標高値リストの要素それぞれについて仰俯角を計算
     max_angle = -90.0
