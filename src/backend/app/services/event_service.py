@@ -5,8 +5,6 @@ from skyfield.api import Topos, load, EarthSatellite
 from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from app.schemas.event import Event
-from app.core.config import Settings
-from app.services.dem_service import get_elevations_by_coords
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -143,24 +141,21 @@ def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph)
 
 @lru_cache(maxsize=128)
 def get_events_for_the_coord(
-        location_name: str | None, # スポット以外の場合に渡す事を禁ずる．
+        location_name: str, # スポット以外の場合は空文字列を渡す．
         lat: float,
         lon: float,
         elevation_m: float,
         horizon_profile: list[float],
         sqm_value: float,
         starlink_instances, # ファイルI/Oはルーターに任せる．
-        station_instances,
-        settings: Settings) -> list[Event]:
+        station_instances) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
     # バッチ処理済みのスポットであるにも関わらず，静的スコアが欠損している場合はスキップする．
-    if location_name and (not horizon_profile or not sqm_value or not elevation_m):
+    if not horizon_profile or not sqm_value or not elevation_m:
+        print(f"WARNING: get_events_for_the_coord関数において，観測地点 ({lat}, {lon}) の静的スコアが不足しています．観測イベントの取得をスキップします．")
         return []
-    
-    if not location_name:
-        elevation_m = get_elevations_by_coords(coords=[{'lat': lat, 'lon': lon}], settings=settings)[0]
     
     # 計算対象にする衛星の国際衛星識別符号を特定
     launch_groups_to_sats = {}

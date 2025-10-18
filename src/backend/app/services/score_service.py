@@ -2,17 +2,14 @@
 import numpy as np
 from skyfield.api import Topos, EarthSatellite, Timescale
 from skyfield.jpllib import SpiceKernel
-from app.core.config import Settings
 
 def calc_visible_time_ratio(
         pass_event: dict,
         satellite: EarthSatellite,
         spot_pos: Topos,
-        horizon_profile: list[float] | None,
-        elevation_m: float,
+        horizon_profile: list[float],
         ts: Timescale,
-        eph: SpiceKernel,
-        settings: Settings) -> float:
+        eph: SpiceKernel) -> float:
     """
     1つのイベントに対して，地形と天文学的な条件（観測地点の暗さ・衛星の被照）から，イベント期間に対する衛星の可視時間割合を計算する．
     """
@@ -55,12 +52,10 @@ def calc_event_score(
         pass_event: dict,
         satellite: EarthSatellite,
         spot_pos: Topos,
-        horizon_profile: list[float] | None,
-        sqm_value: float | None,
-        elevation_m: float,
+        horizon_profile: list[float],
+        sqm_value: float,
         ts: Timescale,
-        eph: SpiceKernel,
-        settings: Settings) -> dict:
+        eph: SpiceKernel) -> dict:
     """
     1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
     """
