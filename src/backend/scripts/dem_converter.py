@@ -8,6 +8,14 @@ import os
 import gc
 from tqdm import tqdm
 import re
+import sys
+from pathlib import Path
+
+# backend/ をPythonの検索パスに追加（先に実行しないとappが見つからないよ．）
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+
+from app.core.config import get_settings
+settings = get_settings()
 
 class xmlDem:
     def __init__(self) -> None:
@@ -137,7 +145,7 @@ class xmlDem:
         ) as dst:
             dst.write(self.Z, 1)
 
-        print(f"Saved GeoTIFF: {output_path}")
+        # print(f"Saved GeoTIFF: {output_path}")
 
 target = "/Users/shotasasaki/Downloads/target"
 input_folders = [
@@ -163,7 +171,7 @@ for input_folder in tqdm(input_folders):
             second = match.group(2)
             third = match.group(3)
 
-            dir_path = f"/Volumes/iFile-1/satellite-spotter/DEM1A/{first}/{first}-{second}"
+            dir_path = f"{str(settings.LOCAL_DATA_ROOT)}/DEM5A/{first}/{first}-{second}"
             os.makedirs(dir_path, exist_ok=True) # exist_ok=True で既に存在してもエラーにならない．
 
             # output_name = f"{dir_path}/{os.path.splitext(xml_file)[0][-32:]}.tif"

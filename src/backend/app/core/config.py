@@ -87,10 +87,10 @@ class Settings(BaseSettings):
         third = tertiary_meshcode[6:]
 
         if self.S3_BUCKET:
-            return f"s3://{self.S3_BUCKET}/DEM1A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
+            return f"s3://{self.S3_BUCKET}/DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
         elif self.LOCAL_DATA_ROOT:
-            path_dsm_tiff = self.LOCAL_DATA_ROOT / f"DEM1A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
-            return str(path_dsm_tiff) if path_dsm_tiff.exists() else None
+            path_dem_tiff = self.LOCAL_DATA_ROOT / f"DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
+            return str(path_dem_tiff) if path_dem_tiff.exists() else None
         else:
             raise ValueError("データソースが設定されていません．")
 

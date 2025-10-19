@@ -39,11 +39,11 @@ def get_elevations_by_coords(coords: list[dict]) -> np.ndarray:
     # メッシュごとに標高データを取得
     elevations = np.full(len(coords), np.nan, dtype=float) # 結果を格納するリスト
     for meshcode, coords_with_indices in coords_by_meshcode.items():
-        path_dsm = settings.get_dem_filepath(tertiary_meshcode=meshcode)
-        if path_dsm is None: # TIFFファイルが存在しなければ開く処理に進まない．
+        path_dem = settings.get_dem_filepath(tertiary_meshcode=meshcode)
+        if path_dem is None: # TIFFファイルが存在しなければ開く処理に進まない．
             continue
 
-        with rasterio.open(path_dsm) as src:
+        with rasterio.open(path_dem) as src:
             # このファイルに属する座標だけをまとめてsampleに渡す．
             coords_to_sample = [(lon, lat) for lon, lat, idx in coords_with_indices]
             results = list(src.sample(coords_to_sample))
