@@ -6,8 +6,8 @@ from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from app.schemas.event import Event
 import pandas as pd
-import requests
 from app.services.score_service import calc_event_score
+import httpx
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -141,24 +141,28 @@ def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph,
     
     return visible_events
 
-def get_weather_dataframe(spot_pos: Topos):
+async def get_weather_dataframe(
+        lat: float,
+        lon: float,
+        elevation_m: float,
+        client: httpx.AsyncClient) -> pd.DataFrame:
     # Open-Meteo APIのエンドポイントとパラメータ
     url = "https://api.open-meteo.com/v1/forecast"
     params = {
-        "latitude": spot_pos.latitude.degrees,
-        "longitude": spot_pos.longitude.degrees,
-        "elevation": spot_pos.elevation.m,
+        "latitude": lat,
+        "longitude": lon,
+        "elevation": elevation_m,
         "hourly": "precipitation,cloud_cover,visibility",
         "timezone": "GMT+0" # ほぼUTCと一致
     }
 
     try:
-        response = requests.get(url, params=params)
+        response = await client.get(url, params=params)
         response.raise_for_status() # エラーがあれば例外を発生
         data = response.json()
-    except requests.exceptions.RequestException as e:
+    except httpx.RequestError as e:
         print(f"ERROR: APIへのリクエストに失敗しました: {e}")
-        return 0.0, {}
+        return pd.DataFrame()
     
     df = pd.DataFrame(data['hourly'])
     df['time'] = pd.to_datetime(df['time']).dt.tz_localize('utc')
@@ -173,13 +177,17 @@ def get_events_for_the_coord(
         horizon_profile: list[float],
         sky_glow_score: float,
         starlink_instances, # ファイルI/Oはルーターに任せる．
-        station_instances) -> list[Event]:
+        station_instances,
+        weather_df: pd.DataFrame) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
     # 静的スコアが欠損している場合はスキップする．
     if not elevation_m or not horizon_profile or not sky_glow_score:
         print(f"WARNING: get_events_for_the_coord関数において，観測地点 ({lat}, {lon}) の静的スコアが不足しています．観測イベントの取得をスキップします．")
+        return []
+    elif weather_df.empty:
+        print(f"WARNING: get_events_for_the_coord関数において，観測地点 ({lat}, {lon}) の天気予報データフレームが空です．観測イベントの取得をスキップします．")
         return []
     
     # 計算対象にする衛星の国際衛星識別符号を特定
@@ -197,9 +205,6 @@ def get_events_for_the_coord(
 
     # 天体暦設定
     eph = load('de421.bsp')
-
-    # 天気予報のデータフレームを取得
-    weather_df = get_weather_dataframe(spot_pos=spot_pos)
 
     events = []
     for group_name, instances in launch_groups_to_sats.items():
