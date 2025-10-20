@@ -53,7 +53,7 @@ def calc_event_score(
         satellite: EarthSatellite,
         spot_pos: Topos,
         horizon_profile: list[float],
-        sqm_value: float,
+        sky_glow_score: float,
         ts: Timescale,
         eph: SpiceKernel) -> dict:
     """
@@ -67,6 +67,7 @@ def calc_event_score(
     scores['visible_time_ratio'] = visible_time_ratio
 
     # 光害スコア（SQM値とボートル・スケールにより夜空の暗さを評価）
+    scores['sky_glow_score'] = sky_glow_score
 
     # 月相スコア（月の満ち欠け）
 

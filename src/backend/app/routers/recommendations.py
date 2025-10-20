@@ -24,6 +24,7 @@ def recommend_events(
     potential_spots = crud_spot.get_top_spots_by_static_score(
         db=db, lat=lat, lon=lon, radius_km=radius, limit=10
     )
+    print(potential_spots)
 
     # 2. スポットそれぞれについて観測イベントのリストを取得して統合
     starlink_instances = load.tle(settings.PATH_TLE_STARLINK)
@@ -37,7 +38,7 @@ def recommend_events(
             lon=row.lon,
             elevation_m=row.elevation_m,
             horizon_profile=row.horizon_profile,
-            sqm_value=row.sqm_value,
+            sky_glow_score=row.sky_glow_score,
             starlink_instances=starlink_instances,
             station_instances=station_instances
         )

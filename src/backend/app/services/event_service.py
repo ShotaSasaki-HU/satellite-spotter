@@ -146,14 +146,14 @@ def get_events_for_the_coord(
         lon: float,
         elevation_m: float,
         horizon_profile: list[float],
-        sqm_value: float,
+        sky_glow_score: float,
         starlink_instances, # ファイルI/Oはルーターに任せる．
         station_instances) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
-    # バッチ処理済みのスポットであるにも関わらず，静的スコアが欠損している場合はスキップする．
-    if not horizon_profile or not sqm_value or not elevation_m:
+    # 静的スコアが欠損している場合はスキップする．
+    if not horizon_profile or not sky_glow_score or not elevation_m:
         print(f"WARNING: get_events_for_the_coord関数において，観測地点 ({lat}, {lon}) の静的スコアが不足しています．観測イベントの取得をスキップします．")
         return []
     
