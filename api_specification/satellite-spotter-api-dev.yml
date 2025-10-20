@@ -268,7 +268,7 @@ paths: # エンドポイント
                         example: 0.8
                         minimum: 0.0
                         maximum: 1.0
-                      topography:
+                      visible_time_ratio:
                         type: number
                         description: 地形スコア
                         example: 0.8
@@ -277,6 +277,12 @@ paths: # エンドポイント
                       sky_glow:
                         type: number
                         description: 光害スコア
+                        example: 0.8
+                        minimum: 0.0
+                        maximum: 1.0
+                      moon_fract_illumi:
+                        type: number
+                        description: 月相スコア
                         example: 0.8
                         minimum: 0.0
                         maximum: 1.0
@@ -348,8 +354,8 @@ components:
         start_time:
           type: string
           format: date-time
-          description: イベントの開始時刻（ISO 8601）
-          example: "2025-10-11T19:50:45+09:00"
+          description: イベントの開始時刻（ISO 8601，UTC）
+          example: "2025-10-11T19:50:45+00:00"
         visibility:
           type: number
           description: 最終的な可視性スコア
@@ -368,12 +374,10 @@ components:
           type: number
           format: float
           description: 経度（十進法度単位）
-        international_designators:
-          type: array
-          items:
-            type: string
-            description: 詳細表示の際に衛星を一意に識別するための国際衛星識別符号
-          example: ["2025-223A", "2025-223B", "2025-223C", "2025-223D", "2025-223E"]
+        international_designator:
+          type: string
+          description: 詳細表示の際に衛星を一意に識別するための国際衛星識別符号
+          example: '2025-223A'
     ErrorResponse: # 共通のエラーレスポンスを定義（DRY原則に基づき）
       type: object
       properties:
