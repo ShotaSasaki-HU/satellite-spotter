@@ -178,7 +178,7 @@ def calc_horizon_profile_parallel(
 
     # 計算パラメータの準備
     azimuths = np.linspace(0, 360, num_directions, endpoint=False) # 各方位
-    distances = np.geomspace(1, max_distance, num_samples) # 各サンプリング点
+    distances = np.geomspace(1, max_distance, num_samples) # 近くの地形を重視するため geomspace を使用
 
     # 各ワーカーに渡す引数（タプル）のリストを作成
     tasks = [(az, observer_lat, observer_lon, observer_height, distances) for az in azimuths]
@@ -212,7 +212,7 @@ def main():
                     observer_lon=row['longitude'],
                     num_directions=180,
                     max_distance=100000,
-                    num_samples=100
+                    num_samples=1000
                 ),
                 axis=1,
                 result_type='expand' # 戻り値が複数であるため．
