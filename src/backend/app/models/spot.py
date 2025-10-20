@@ -18,6 +18,6 @@ class Spot(Base):
 
     # 時間的に変化しない静的な評価指標
     horizon_profile = Column(ARRAY(Float), nullable=True)
-    sqm_value = Column(Float, nullable=True)
+    wa2015_raw_value = Column(Float, nullable=True)
 
     elevation_m = Column(Float, nullable=True) # 標高（m）

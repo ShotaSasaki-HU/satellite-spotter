@@ -61,8 +61,8 @@ def main():
 
             try:
                 with rasterio.open(PATH_WORLD_ATLAS_2015_TIFF) as src:
-                    wa2015_values = np.array(list(src.sample(coords_to_sample)))
-                    df['wa2015_value'] = wa2015_values
+                    wa2015_raw_values = np.array(list(src.sample(coords_to_sample)))
+                    df['wa2015_raw_value'] = wa2015_raw_values
 
             except rasterio.errors.RasterioIOError:
                 print(f"ERROR: World Atlas 2015データセットが見つかりません．: {PATH_WORLD_ATLAS_2015_TIFF}")

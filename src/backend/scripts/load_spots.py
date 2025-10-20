@@ -76,9 +76,9 @@ def main():
 
                     # SQM値をfloatに変換
                     try:
-                        sqm_value= float(row.get('sqm_value')) if row.get('sqm_value') else None
+                        wa2015_raw_value= float(row.get('wa2015_raw_value')) if row.get('wa2015_raw_value') else None
                     except (ValueError, TypeError):
-                        sqm_value = None
+                        wa2015_raw_value = None
                     
                     # 標高をfloatに変換
                     try:
@@ -93,7 +93,7 @@ def main():
                         'geom': point_geom, # POINTのWKT文字列をセット
                         'polygon_geom': polygon_geom, # POLYGONのWKT文字列またはNoneをセット
                         'horizon_profile': horizon_profile_list,
-                        'sqm_value': sqm_value,
+                        'wa2015_raw_value': wa2015_raw_value,
                         'elevation_m': elevation_m
                     }
                     spots_to_create.append(spot_data)
