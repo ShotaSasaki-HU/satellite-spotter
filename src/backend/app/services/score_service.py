@@ -70,32 +70,14 @@ def calc_moon_fraction_illuminated(
 
     return 1.0 - moon_fract_illumi
 
-def get_meteorological_score(pass_event: dict, spot_pos: Topos) -> tuple[float, float, float]:
+def get_meteorological_score(pass_event: dict, weather_df: pd.DataFrame) -> tuple[float, float, float]:
     """
     Open-Meteo APIから天気情報を取得し，雨スコア・雲量スコア・視程スコアを計算する．
 
     Returns:
         (float, float, float): 雨スコア・雲量スコア・視程スコア
     """
-    # Open-Meteo APIのエンドポイントとパラメータ
-    url = "https://api.open-meteo.com/v1/forecast"
-    params = {
-        "latitude": spot_pos.latitude.degrees,
-        "longitude": spot_pos.longitude.degrees,
-        "hourly": "precipitation,cloud_cover,visibility",
-        "timezone": "GMT+0" # ほぼUTCと一致
-    }
-
-    try:
-        response = requests.get(url, params=params)
-        response.raise_for_status() # エラーがあれば例外を発生
-        data = response.json()
-    except requests.exceptions.RequestException as e:
-        print(f"ERROR: APIへのリクエストに失敗しました: {e}")
-        return 0.0, {}
-    
-    df = pd.DataFrame(data['hourly'])
-    df['time'] = pd.to_datetime(df['time']).dt.tz_localize('utc')
+    df = weather_df
 
     # パスイベント開始時刻に最も近い未来の予報を取得
     t_rise = pass_event['rise_time'].utc_datetime()
@@ -134,7 +116,8 @@ def calc_event_score(
         horizon_profile: list[float],
         sky_glow_score: float,
         ts: Timescale,
-        eph: SpiceKernel) -> dict:
+        eph: SpiceKernel,
+        weather_df: pd.DataFrame) -> dict:
     """
     1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
     """
@@ -153,15 +136,17 @@ def calc_event_score(
     scores['moon_fract_illumi'] = moon_fract_illumi
 
     # 気象スコア（観測日時における降水・雲量・視程の予報スコア）
-    rain_score, cloud_score, met_visibility_score = get_meteorological_score(pass_event=pass_event, spot_pos=spot_pos)
+    rain_score, cloud_score, met_visibility_score = get_meteorological_score(pass_event=pass_event, weather_df=weather_df)
     scores['rain_score'] = rain_score
     scores['cloud_score'] = cloud_score
     scores['met_visibility_score'] = met_visibility_score
 
     # 衛星の満ち欠け？
 
+    # 不快度スコア？
+
     # 最終スコアの計算（全スコアの総積）
     visibility = np.prod(np.array(scores.values()))
     scores['visibility'] = visibility
 
-    return
+    return scores

@@ -2,9 +2,11 @@
 import numpy as np
 import re
 from skyfield.api import Topos, load, EarthSatellite
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from functools import lru_cache
 from app.schemas.event import Event
+import pandas as pd
+import requests
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -139,6 +141,30 @@ def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph)
     
     return visible_events
 
+def get_weather_dataframe(spot_pos: Topos):
+    # Open-Meteo APIのエンドポイントとパラメータ
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": spot_pos.latitude.degrees,
+        "longitude": spot_pos.longitude.degrees,
+        "elevation": spot_pos.elevation.m,
+        "hourly": "precipitation,cloud_cover,visibility",
+        "timezone": "GMT+0" # ほぼUTCと一致
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status() # エラーがあれば例外を発生
+        data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: APIへのリクエストに失敗しました: {e}")
+        return 0.0, {}
+    
+    df = pd.DataFrame(data['hourly'])
+    df['time'] = pd.to_datetime(df['time']).dt.tz_localize('utc')
+
+    return df
+
 @lru_cache(maxsize=128)
 def get_events_for_the_coord(
         location_name: str, # スポット以外の場合は空文字列を渡す．
@@ -153,7 +179,7 @@ def get_events_for_the_coord(
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
     # 静的スコアが欠損している場合はスキップする．
-    if not horizon_profile or not sky_glow_score or not elevation_m:
+    if not elevation_m or not horizon_profile or not sky_glow_score:
         print(f"WARNING: get_events_for_the_coord関数において，観測地点 ({lat}, {lon}) の静的スコアが不足しています．観測イベントの取得をスキップします．")
         return []
     
@@ -172,6 +198,9 @@ def get_events_for_the_coord(
 
     # 天体暦設定
     eph = load('de421.bsp')
+
+    # 天気予報のデータフレームを取得
+    weather_df = get_weather_dataframe(spot_pos=spot_pos)
 
     for group_name, instances in launch_groups_to_sats.items():
         representative_sat = instances[0] # 処理の軽量化のため代表衛星を適当に定義
