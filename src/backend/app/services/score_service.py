@@ -82,7 +82,7 @@ def get_meteorological_score(pass_event: dict, weather_df: pd.DataFrame) -> tupl
     t_rise = pass_event['rise_time'].utc_datetime()
     future_forecasts = df[df['time'] >= t_rise]
     if future_forecasts.empty:
-        print("WARN: 現在時刻以降の予報が見つかりません。")
+        print(f"WARN: {t_rise.isoformat()}以降の予報が見つかりません。")
         return 0.0, 0.0, 0.0
     
     current_weather = future_forecasts.iloc[0]
