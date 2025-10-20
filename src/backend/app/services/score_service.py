@@ -48,6 +48,26 @@ def calc_visible_time_ratio(
 
     return (is_foreground & is_dark_enough & is_sun_lit).mean() # Trueの割合
 
+def calc_moon_fraction_illuminated(
+        pass_event: dict,
+        spot_pos: Topos,
+        eph: SpiceKernel):
+    """
+    1つのイベントに対して，月が照らされている割合を計算する．
+    """
+    t_peak = pass_event['peak_time']
+    sun, moon, earth = eph['sun'], eph['moon'], eph['earth']
+
+    # 月が地平線の下ならば，明るさに関わらず影響はゼロ．
+    moon_alt = (earth + spot_pos).at(t_peak).observe(moon).apparent().altaz()[0].degrees
+    if moon_alt < 0:
+        return 1.0
+    
+    # What fraction of a spherical body is illuminated by the sun.
+    moon_fract_illumi = (earth + spot_pos).at(t_peak).observe(moon).apparent().fraction_illuminated(sun)
+
+    return 1.0 - moon_fract_illumi
+
 def calc_event_score(
         pass_event: dict,
         satellite: EarthSatellite,
@@ -70,8 +90,12 @@ def calc_event_score(
     scores['sky_glow_score'] = sky_glow_score
 
     # 月相スコア（月の満ち欠け）
+    moon_fract_illumi = calc_moon_fraction_illuminated(pass_event=pass_event, spot_pos=spot_pos, eph=eph)
+    scores['moon_fract_illumi'] = moon_fract_illumi
 
     # 気象スコア（観測日時における降水・雲量・視程の予報スコア）
+
+    # 衛星の満ち欠け？
 
     # 最終スコアの計算（全スコアの総積）
     visibility = np.prod(np.array(scores.values()))
