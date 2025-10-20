@@ -2,6 +2,8 @@
 import numpy as np
 from skyfield.api import Topos, EarthSatellite, Timescale
 from skyfield.jpllib import SpiceKernel
+import requests
+import pandas as pd
 
 def calc_visible_time_ratio(
         pass_event: dict,
@@ -68,6 +70,63 @@ def calc_moon_fraction_illuminated(
 
     return 1.0 - moon_fract_illumi
 
+def get_meteorological_score(pass_event: dict, spot_pos: Topos) -> tuple[float, float, float]:
+    """
+    Open-Meteo APIから天気情報を取得し，雨スコア・雲量スコア・視程スコアを計算する．
+
+    Returns:
+        (float, float, float): 雨スコア・雲量スコア・視程スコア
+    """
+    # Open-Meteo APIのエンドポイントとパラメータ
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": spot_pos.latitude.degrees,
+        "longitude": spot_pos.longitude.degrees,
+        "hourly": "precipitation,cloud_cover,visibility",
+        "timezone": "GMT+0" # ほぼUTCと一致
+    }
+
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status() # エラーがあれば例外を発生
+        data = response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"ERROR: APIへのリクエストに失敗しました: {e}")
+        return 0.0, {}
+    
+    df = pd.DataFrame(data['hourly'])
+    df['time'] = pd.to_datetime(df['time']).dt.tz_localize('utc')
+
+    # パスイベント開始時刻に最も近い未来の予報を取得
+    t_rise = pass_event['rise_time'].utc_datetime()
+    future_forecasts = df[df['time'] >= t_rise]
+    if future_forecasts.empty:
+        print("WARN: 現在時刻以降の予報が見つかりません。")
+        return 0.0, 0.0, 0.0
+    
+    current_weather = future_forecasts.iloc[0]
+
+    precipitation = current_weather['precipitation']
+    cloud_cover = current_weather['cloud_cover']
+    met_visibility = current_weather['visibility']
+
+    # 雨スコア
+    if precipitation > 0.0: # 雨が降る予報ならば即ゼロ
+        rain_score = 0.0
+    else:
+        rain_score = 1.0
+    
+    # 雲量スコア
+    cloud_score = 1.0 - (cloud_cover / 100.0)
+    
+    # 視程スコア
+    VIS_MIN = 5000.0  # これ以下はスコア0 (5km)
+    VIS_MAX = 24140.0 # これ以上はスコア1 (24.14km)
+    met_visibility_score = (met_visibility - VIS_MIN) / (VIS_MAX - VIS_MIN)
+    met_visibility_score = np.clip(met_visibility_score, 0, 1) # 0.0-1.0の範囲にクリップ
+
+    return rain_score, cloud_score, met_visibility_score
+
 def calc_event_score(
         pass_event: dict,
         satellite: EarthSatellite,
@@ -94,6 +153,10 @@ def calc_event_score(
     scores['moon_fract_illumi'] = moon_fract_illumi
 
     # 気象スコア（観測日時における降水・雲量・視程の予報スコア）
+    rain_score, cloud_score, met_visibility_score = get_meteorological_score(pass_event=pass_event, spot_pos=spot_pos)
+    scores['rain_score'] = rain_score
+    scores['cloud_score'] = cloud_score
+    scores['met_visibility_score'] = met_visibility_score
 
     # 衛星の満ち欠け？
 
