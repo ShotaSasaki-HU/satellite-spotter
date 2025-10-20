@@ -22,7 +22,7 @@ def recommend_events(
 ):
     # 1. 探索中心と探索半径を用いて，観測候補スポットのRowオブジェクトのリストを取得．
     potential_spots = crud_spot.get_top_spots_by_static_score(
-        db=db, lat=lat, lon=lon, radius_km=radius, limit=10
+        db=db, lat=lat, lon=lon, radius_km=radius, limit=5
     )
 
     # 2. スポットそれぞれについて観測イベントのリストを取得して統合

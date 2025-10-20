@@ -2,7 +2,6 @@
 import numpy as np
 from skyfield.api import Topos, EarthSatellite, Timescale
 from skyfield.jpllib import SpiceKernel
-import requests
 import pandas as pd
 
 def calc_visible_time_ratio(
@@ -146,7 +145,7 @@ def calc_event_score(
     # 不快度スコア？
 
     # 最終スコアの計算（全スコアの総積）
-    visibility = np.prod(np.array(scores.values()))
+    visibility = np.prod(list(scores.values()))
     scores['visibility'] = visibility
 
     return scores

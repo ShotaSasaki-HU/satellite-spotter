@@ -2,11 +2,12 @@
 import numpy as np
 import re
 from skyfield.api import Topos, load, EarthSatellite
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from app.schemas.event import Event
 import pandas as pd
 import requests
+from app.services.score_service import calc_event_score
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -34,7 +35,6 @@ def calc_circular_std(rads: list) -> float:
     circular_std_rad = np.sqrt(-2 * np.log(r_bar))
     return circular_std_rad
 
-@lru_cache
 def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
     # TLEに記載の衛星群を国際衛星識別番号でグルーピング
     launch_groups_with_instances = {} # {グループ名: [衛星インスタンスのリスト]}
@@ -86,7 +86,6 @@ def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
 
     return launch_groups_in_train_form
 
-@lru_cache
 def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A', '21066A']):
     for instance in sat_instances.values():
         intldesg = instance.model.intldesg # 国際衛星識別番号
@@ -118,7 +117,7 @@ def get_raw_pass_events(satellite: EarthSatellite, spot_pos,
 
     return pass_events
 
-def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph) -> list[dict]:
+def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph, ts) -> list[dict]:
     """
     天文学的な条件（観測地点の暗さ・衛星の被照）でイベントを絞り込む．
     """
@@ -130,7 +129,8 @@ def filter_visible_events(pass_events, satellite: EarthSatellite, spot_pos, eph)
         has_full_timestamp = len(pass_event) == 3
 
         # 「太陽高度が-6度以下」かつ「衛星が太陽光に照らされている」瞬間があるか？
-        t = pass_event.values()
+        t_list = [time.tt for time in pass_event.values()]
+        t = ts.tt_jd(t_list)
         sun_alt = (earth + spot_pos).at(t).observe(sun).apparent().altaz()[0].degrees # 太陽高度のリスト
         is_dark_enough = sun_alt <= -6 # 太陽高度が-6度以下であるかの真偽値リスト
         is_sun_lit = satellite.at(t).is_sunlit(eph) # 衛星に太陽光が当たっているかの真偽値リスト
@@ -165,7 +165,6 @@ def get_weather_dataframe(spot_pos: Topos):
 
     return df
 
-@lru_cache(maxsize=128)
 def get_events_for_the_coord(
         location_name: str, # スポット以外の場合は空文字列を渡す．
         lat: float,
@@ -202,16 +201,48 @@ def get_events_for_the_coord(
     # 天気予報のデータフレームを取得
     weather_df = get_weather_dataframe(spot_pos=spot_pos)
 
+    events = []
     for group_name, instances in launch_groups_to_sats.items():
-        representative_sat = instances[0] # 処理の軽量化のため代表衛星を適当に定義
+        repre_sat = instances[0] # 処理の軽量化のため代表衛星を適当に定義
 
         # 生の天球イベントを取得
-        raw_passes = get_raw_pass_events(satellite=representative_sat, spot_pos=spot_pos, t0=t0, t1=t1)
+        raw_passes = get_raw_pass_events(satellite=repre_sat, spot_pos=spot_pos, t0=t0, t1=t1)
         # 天文学的条件でフィルタ
-        visible_passes = filter_visible_events(pass_events=raw_passes, satellite=representative_sat,
-                                               spot_pos=spot_pos, eph=eph)
+        visible_passes = filter_visible_events(pass_events=raw_passes, satellite=repre_sat,
+                                               spot_pos=spot_pos, eph=eph, ts=ts)
         
         for pass_event in visible_passes:
-            pass
+            scores = calc_event_score(
+                pass_event=pass_event,
+                satellite=repre_sat,
+                spot_pos=spot_pos,
+                horizon_profile=horizon_profile,
+                sky_glow_score=sky_glow_score,
+                ts=ts,
+                eph=eph,
+                weather_df=weather_df
+            )
 
-    return
+            if 'STARLINK' in repre_sat.name:
+                event_type = 'スターリンクトレイン'
+            elif 'ISS' in repre_sat.name:
+                event_type = '国際宇宙ステーション（ISS）'
+            else:
+                event_type = '不明'
+            
+            intldesg = repre_sat.model.intldesg
+
+            event = Event(
+                location_name=location_name,
+                start_time=pass_event['rise_time'].astimezone(timezone.utc).isoformat(),
+                end_time=pass_event['set_time'].astimezone(timezone.utc).isoformat(),
+                visibility=scores['visibility'],
+                event_type=event_type,
+                lat=lat,
+                lon=lon,
+                international_designator=intldesg
+            )
+
+            events.append(event)
+
+    return events
