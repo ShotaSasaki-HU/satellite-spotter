@@ -164,9 +164,8 @@ def get_events_for_the_coord(
 
     # 時刻・検索期間設定
     ts = load.timescale()
-    t0 = ts.now() + timedelta(days=0, hours=0, minutes=40)
+    t0 = ts.now()
     t1 = ts.utc(t0.utc_datetime() + timedelta(days=7))
-    tz = timezone(timedelta(hours=9))
 
     # 観測値設定
     spot_pos = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
