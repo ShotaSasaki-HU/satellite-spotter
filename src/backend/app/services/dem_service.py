@@ -138,9 +138,9 @@ def calc_horizon_profile_parallel(
         observer_lat: float,
         observer_lon: float,
         observer_eye_height: float = 1.55,
-        num_directions: int = 360,
-        max_distance: float = 150000.0,
-        num_samples: int = 150):
+        num_directions: int = 180,
+        max_distance: float = 100000,
+        num_samples: int = 100):
     """
     観測地点から360°の水地平線・稜線プロファイルを計算する．
 
