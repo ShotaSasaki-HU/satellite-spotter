@@ -1,4 +1,4 @@
-# scripts/add_sqm_value.py
+# scripts/add_wa2015_value.py
 
 from pathlib import Path
 import pandas as pd
@@ -44,7 +44,7 @@ def calc_srm_value(path_world_atlas_2015: str, coords_to_sample: list[(float, fl
         return np.array([])
 
 def main():
-    print("SQM値をCSVに追記します．")
+    print("World Atlas 2015の生値をCSVに追記します．")
 
     PATH_WORLD_ATLAS_2015_TIFF = settings.PATH_WORLD_ATLAS_2015_TIFF
 
@@ -52,20 +52,27 @@ def main():
         for csv_path in sorted(DATA_DIR.rglob("*.csv")):
             print(f"{csv_path} を処理中...")
             df = pd.read_csv(csv_path, encoding='utf-8', header=0)
-            print(f"{len(df)}件のスポットのSQM値を計算中...")
+            print(f"{len(df)}件のスポットについて計算中...")
 
             # tqdmとpandasを連携・プログレスバーの説明を設定
-            tqdm.pandas(desc="Calculating SQM Value")
+            tqdm.pandas(desc="Acquiring Raw Value of World Atlas 2015")
 
             coords_to_sample = list(zip(df['longitude'], df['latitude']))
 
-            df['sqm_value'] = calc_srm_value(path_world_atlas_2015=PATH_WORLD_ATLAS_2015_TIFF, coords_to_sample=coords_to_sample)
+            try:
+                with rasterio.open(PATH_WORLD_ATLAS_2015_TIFF) as src:
+                    wa2015_values = np.array(list(src.sample(coords_to_sample)))
+                    df['wa2015_value'] = wa2015_values
+
+            except rasterio.errors.RasterioIOError:
+                print(f"ERROR: World Atlas 2015データセットが見つかりません．: {PATH_WORLD_ATLAS_2015_TIFF}")
+                return np.array([])
 
             print(f"{csv_path} を保存中...")
             df.to_csv(csv_path, index=False, encoding='utf-8')
             print('---')
 
-        print("SQM値の追記が正常に完了しました．")
+        print("World Atlas 2015の生値の追記が正常に完了しました．")
 
     except Exception as e:
         print(f"エラーが発生しました: {e}")
