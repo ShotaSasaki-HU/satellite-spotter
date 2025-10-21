@@ -113,14 +113,7 @@ paths: # エンドポイント
                   events:
                     type: array
                     items:
-                      type: object
-                      allOf: # allOf を使って共通スキーマを継承
-                        - $ref: '#/components/schemas/EventBase'
-                      properties: # 差分だけを記述
-                        location_name:
-                          type: string
-                          description: 公園や展望台の名前
-                          example: "鏡山公園"                
+                      $ref: '#/components/schemas/EventBase'
         '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
@@ -351,6 +344,10 @@ components:
     EventBase: # イベントの共通スキーマ
       type: object
       properties:
+        location_name:
+          type: string
+          description: 公園や展望台の名前
+          example: "鏡山公園"
         start_time:
           type: string
           format: date-time
