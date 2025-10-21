@@ -3,11 +3,11 @@ import numpy as np
 import re
 from skyfield.api import Topos, load, EarthSatellite
 from datetime import datetime, timedelta, timezone
-from functools import lru_cache
 from app.schemas.event import Event
 import pandas as pd
 from app.services.score_service import calc_event_score
 import httpx
+import asyncio
 
 def calc_circular_std(rads: list) -> float:
     """
@@ -168,6 +168,12 @@ async def get_weather_dataframe(
     df['time'] = pd.to_datetime(df['time']).dt.tz_localize('utc')
 
     return df
+
+def get_weather_dataframe_sync(lat: float, lon: float, elevation_m: float) -> pd.DataFrame:
+    async def _runner():
+        async with httpx.AsyncClient() as client:
+            return await get_weather_dataframe(lat, lon, elevation_m, client)
+    return asyncio.run(_runner())
 
 def get_events_for_the_coord(
         location_name: str, # スポット以外の場合は空文字列を渡す．
