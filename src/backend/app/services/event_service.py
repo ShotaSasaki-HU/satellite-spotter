@@ -169,6 +169,25 @@ async def get_weather_dataframe(
 
     return df
 
+async def fetch_weather_limited(
+        lat: float,
+        lon: float,
+        elevation_m: float,
+        client: httpx.AsyncClient,
+        semaphore: asyncio.Semaphore) -> pd.DataFrame:
+    """
+    セマフォを使用して同時実行数を制限しながら天気予報を取得する．
+    """
+    # async with semaphoreに入ると，セマフォの空きが出るまで待機する．
+    async with semaphore:
+        # セマフォを獲得したら，APIリクエストを実行．
+        return await get_weather_dataframe(
+            lat=lat,
+            lon=lon,
+            elevation_m=elevation_m,
+            client=client
+        )
+
 def get_weather_dataframe_sync(lat: float, lon: float, elevation_m: float) -> pd.DataFrame:
     async def _runner():
         async with httpx.AsyncClient() as client:

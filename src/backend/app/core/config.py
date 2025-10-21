@@ -31,8 +31,7 @@ class Settings(BaseSettings):
     LOCAL_DATA_ROOT: Path | None = None
     S3_BUCKET: str | None = None
 
-    # 更新が確実に必要となるファイルは環境変数にして，config.pyの編集を減らす．
-    # 今の所，そのようなファイルはなし．
+    OPEN_METEO_CONCURRENCY_LIMIT: int
 
     @computed_field
     @property
