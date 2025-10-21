@@ -3,7 +3,7 @@ import numpy as np
 import re
 from skyfield.api import Topos, load, EarthSatellite
 from datetime import datetime, timedelta, timezone
-from app.schemas.event import Event
+from app.schemas.event import Event, Score
 import pandas as pd
 from app.services.score_service import calc_event_score
 import httpx
@@ -242,7 +242,7 @@ def get_events_for_the_coord(
                                                spot_pos=spot_pos, eph=eph, ts=ts)
         
         for pass_event in visible_passes:
-            scores = calc_event_score(
+            scores: Score = calc_event_score(
                 pass_event=pass_event,
                 satellite=repre_sat,
                 spot_pos=spot_pos,
@@ -264,7 +264,7 @@ def get_events_for_the_coord(
                 location_name=location_name,
                 start_time=pass_event['rise_time'].astimezone(timezone.utc).isoformat(),
                 end_time=pass_event['set_time'].astimezone(timezone.utc).isoformat(),
-                visibility=scores['visibility'],
+                scores=scores,
                 event_type=event_type,
                 lat=lat,
                 lon=lon,

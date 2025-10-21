@@ -176,14 +176,29 @@ paths: # エンドポイント
     get:
       summary: 特定のイベントの軌道とスコア詳細を取得する．
       parameters:
+        - name: location_name
+          in: query
+          required: true
+          description: 公園や展望台の名前
+          schema:
+            type: string
+            example: "鏡山公園"
         - name: start_time
           in: query
           required: true
-          description: イベントの開始時刻（ISO 8601）
+          description: イベントの開始時刻（ISO 8601，UTC）
           schema:
             type: string
             format: date-time
             example: "2025-10-11T19:50:45+09:00"
+        - name: end_time
+          in: query
+          required: true
+          description: イベントの終了時刻（ISO 8601，UTC）
+          schema:
+            type: string
+            format: date-time
+            example: "2025-10-11T19:55:45+09:00"
         - name: lat
           in: query
           required: true # 必須
@@ -199,7 +214,7 @@ paths: # エンドポイント
         - name: international_designators
           in: query
           required: true
-          description: 開始時間と終了時間の決定に必要となる注目している衛星の国際衛星識別符号
+          description: 国際衛星識別符号
           schema:
             type: array
             items:
@@ -215,16 +230,10 @@ paths: # エンドポイント
               schema:
                 type: object
                 properties:
-                  start_time:
+                  location_name:
                     type: string
-                    format: date-time
-                    description: イベントの開始時刻（ISO 8601）
-                    example: "2025-10-11T19:50:45+09:00"
-                  end_time:
-                    type: string
-                    format: date-time
-                    description: イベントの終了時刻（ISO 8601）
-                    example: "2025-10-11T19:55:45+09:00"
+                    description: 公園や展望台の名前
+                    example: "鏡山公園"
                   trajectories:
                     type: array
                     items:
@@ -244,59 +253,14 @@ paths: # エンドポイント
                                 type: string
                                 example: "2025-223A"
                                 description: 国際衛星識別番号
-                              ra:
+                              az:
                                 type: number
                                 format: float
-                                description: 当該衛星の赤経（度）
-                              dec:
+                                description: 当該衛星の方位角（度）
+                              alt:
                                 type: number
                                 format: float
-                                description: 当該衛星の赤緯（度）
-                  scores:
-                    type: object
-                    properties:
-                      visibility:
-                        type: number
-                        description: 最終的な可視性スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
-                      visible_time_ratio:
-                        type: number
-                        description: 地形スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
-                      sky_glow:
-                        type: number
-                        description: 光害スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
-                      moon_fract_illumi:
-                        type: number
-                        description: 月相スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
-                      rain:
-                        type: number
-                        description: 雨スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
-                      cloud:
-                        type: number
-                        description: 雲量スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
-                      met_visibility:
-                        type: number
-                        description: 気象学的な視程スコア
-                        example: 0.8
-                        minimum: 0.0
-                        maximum: 1.0
+                                description: 当該衛星の仰俯角（度）
         '400': # Bad Request（クライアントのミス）
           description: パラメータが不正な場合
           content:
@@ -358,12 +322,30 @@ components:
           format: date-time
           description: イベントの終了時刻（ISO 8601，UTC）
           example: "2025-10-11T19:55:45+00:00"
-        visibility:
-          type: number
-          description: 最終的な可視性スコア
-          example: 0.8
-          minimum: 0.0
-          maximum: 1.0
+        scores:
+          type: object
+          properties:
+            visibility:
+              type: number
+              description: 最終的な可視性スコア
+            visible_time_ratio:
+              type: number
+              description: 地形スコア
+            sky_glow:
+              type: number
+              description: 光害スコア
+            moon_fract_illumi:
+              type: number
+              description: 月相スコア
+            rain:
+              type: number
+              description: 雨スコア
+            cloud:
+              type: number
+              description: 雲量スコア
+            met_visibility:
+              type: number
+              description: 気象学的な視程スコア
         event_type:
           type: string
           description: 観測対象のタイプ（ISS, Starlink Satellite Train, etc.）

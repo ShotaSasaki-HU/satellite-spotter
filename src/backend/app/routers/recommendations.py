@@ -67,7 +67,7 @@ async def recommend_events(
             unified_events.extend(events_for_the_spot)
 
     # visibilityが高い順にソート
-    top_events = sorted(unified_events, key=lambda e: e.visibility, reverse=True)
+    top_events = sorted(unified_events, key=lambda e: e.scores.visibility, reverse=True)
     total = len(top_events)
     
     return {'total': total, 'events': top_events[offset:offset+limit]}

@@ -5,6 +5,7 @@ from skyfield.jpllib import SpiceKernel
 import pandas as pd
 import rasterio
 from app.core.config import Settings
+from app.schemas.event import Score
 
 def calc_visible_time_ratio(
         pass_event: dict,
@@ -168,7 +169,7 @@ def calc_event_score(
         sky_glow_score: float,
         ts: Timescale,
         eph: SpiceKernel,
-        weather_df: pd.DataFrame) -> dict:
+        weather_df: pd.DataFrame) -> Score:
     """
     1つのイベントに対して，地形・光害・気象を考慮した最終スコアを計算する．
     """
@@ -180,7 +181,7 @@ def calc_event_score(
     scores['visible_time_ratio'] = visible_time_ratio
 
     # 光害スコア（SQM値とボートル・スケールにより夜空の暗さを評価）
-    scores['sky_glow_score'] = sky_glow_score
+    scores['sky_glow'] = sky_glow_score
 
     # 月相スコア（月の満ち欠け）
     moon_fract_illumi = calc_moon_fraction_illuminated(pass_event=pass_event, spot_pos=spot_pos, eph=eph)
@@ -188,9 +189,9 @@ def calc_event_score(
 
     # 気象スコア（観測日時における降水・雲量・視程の予報スコア）
     rain_score, cloud_score, met_visibility_score = get_meteorological_score(pass_event=pass_event, weather_df=weather_df)
-    scores['rain_score'] = rain_score
-    scores['cloud_score'] = cloud_score
-    scores['met_visibility_score'] = met_visibility_score
+    scores['rain'] = rain_score
+    scores['cloud'] = cloud_score
+    scores['met_visibility'] = met_visibility_score
 
     # 衛星の満ち欠け？
 
@@ -200,4 +201,4 @@ def calc_event_score(
     visibility = np.prod(list(scores.values()))
     scores['visibility'] = visibility
 
-    return scores
+    return Score(**scores)

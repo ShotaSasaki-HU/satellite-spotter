@@ -53,7 +53,7 @@ def forecast_events(
     )
 
     # visibilityが高い順にソート
-    events = sorted(events, key=lambda e: e.visibility, reverse=True)
+    events = sorted(events, key=lambda e: e.scores.visibility, reverse=True)
     total = len(events)
     
     return {'total': total, 'events': events[offset:offset+limit]}
