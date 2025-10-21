@@ -3,6 +3,8 @@ import numpy as np
 from skyfield.api import Topos, EarthSatellite, Timescale
 from skyfield.jpllib import SpiceKernel
 import pandas as pd
+import rasterio
+from app.core.config import Settings
 
 def calc_visible_time_ratio(
         pass_event: dict,
@@ -107,6 +109,56 @@ def get_meteorological_score(pass_event: dict, weather_df: pd.DataFrame) -> tupl
     met_visibility_score = np.clip(met_visibility_score, 0, 1) # 0.0-1.0の範囲にクリップ
 
     return rain_score, cloud_score, met_visibility_score
+
+def calc_sky_glow_score(coords_to_sample: list[(float, float)], settings: Settings) -> np.ndarray:
+    # 光害スコアの計算と正規化
+    # World Atlas 2015の生値をSQM値に変換
+    try:
+        with rasterio.open(settings.PATH_WORLD_ATLAS_2015_TIFF) as src:
+            sample_results = np.array(list(src.sample(coords_to_sample)))
+    except rasterio.errors.RasterioIOError:
+        print(f"⚠️ 警告: 観測地点 {coords_to_sample} に対応するWorld Atlas 2015の値が取得できませんでした．")
+        return np.full(len(coords_to_sample), 0.0)
+
+    NATURAL_SKY_BRIGHTNESS_MCD_M2 = 0.171168465
+    SQM_CONVERSION_CONSTANT = 108000000
+    LOG_BASE_FACTOR = -0.4
+    SQM_MIN = 14.0 # 新宿で17.5程度
+    SQM_MAX = 23.0
+
+    artificial_brightness = sample_results[:, 0]
+    artificial_brightness[artificial_brightness < 0] = 0 # 負の値を0にクリップ
+    total_brightness = artificial_brightness + NATURAL_SKY_BRIGHTNESS_MCD_M2
+    sqm_value = np.log10(total_brightness / SQM_CONVERSION_CONSTANT) / LOG_BASE_FACTOR
+
+    # SQM値を限界等級NELM（Naked-Eye Limiting Magnitude）に変換
+    # 参考文献：Crumey, Andrew (2014). “Human Contrast Threshold and Astronomical Visibility”. Monthly Notices of the Royal Astronomical Society. 442 (3): 2600-2619.
+    F = 2.0 # 典型的な観測者と仮定
+
+    NELM_INTERCEPT_91 = -1.44 - (2.5 * np.log10(F))
+    NELM_SLOPE_91 = 0.383
+
+    NELM_INTERCEPT_90 = 0.8 - (2.5 * np.log10(F))
+    NELM_SLOPE_90 = 0.27
+
+    nelm_value = np.where(
+        sqm_value >= 19.5,
+        (NELM_SLOPE_91 * sqm_value) + NELM_INTERCEPT_91,
+        (NELM_SLOPE_90 * sqm_value) + NELM_INTERCEPT_90
+    )
+    
+    # NELMをクリップ
+    NELM_MIN = (NELM_SLOPE_90 * SQM_MIN) + NELM_INTERCEPT_90
+    NELM_MAX = (NELM_SLOPE_91 * SQM_MAX) + NELM_INTERCEPT_91
+    nelm_value = np.clip(nelm_value, NELM_MIN, NELM_MAX)
+
+    NELM_RANGE = NELM_MAX - NELM_MIN
+    if NELM_RANGE > 0:
+        sky_glow_score = (nelm_value - NELM_MIN) / NELM_RANGE
+    else:
+        sky_glow_score = np.full_like(nelm_value, 0.0)
+    
+    return sky_glow_score
 
 def calc_event_score(
         pass_event: dict,
