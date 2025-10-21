@@ -353,6 +353,11 @@ components:
           format: date-time
           description: イベントの開始時刻（ISO 8601，UTC）
           example: "2025-10-11T19:50:45+00:00"
+        end_time:
+          type: string
+          format: date-time
+          description: イベントの終了時刻（ISO 8601，UTC）
+          example: "2025-10-11T19:55:45+00:00"
         visibility:
           type: number
           description: 最終的な可視性スコア
@@ -371,10 +376,12 @@ components:
           type: number
           format: float
           description: 経度（十進法度単位）
-        international_designator:
-          type: string
+        international_designators:
+          type: array
           description: 詳細表示の際に衛星を一意に識別するための国際衛星識別符号
-          example: '2025-223A'
+          items:
+            type: string
+          example: ["25225A","25225B","25225C","25225D","25225E","25225F","25225G","25225H","25225J","25225K","25225L","25225M","25225N","25225P","25225Q","25225R","25225S","25225T","25225U","25225V","25225W","25225X","25225Y","25225Z","25225AA","25225AB","25225AC","25225AD"]
     ErrorResponse: # 共通のエラーレスポンスを定義（DRY原則に基づき）
       type: object
       properties:

@@ -9,7 +9,7 @@ class Event(BaseModel):
     event_type: str
     lat: float
     lon: float
-    international_designator: str
+    international_designators: list[str]
 
     class Config:
         orm_mode = True

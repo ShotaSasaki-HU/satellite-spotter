@@ -241,8 +241,6 @@ def get_events_for_the_coord(
             else:
                 event_type = '不明'
             
-            intldesg = repre_sat.model.intldesg
-
             event = Event(
                 location_name=location_name,
                 start_time=pass_event['rise_time'].astimezone(timezone.utc).isoformat(),
@@ -251,7 +249,7 @@ def get_events_for_the_coord(
                 event_type=event_type,
                 lat=lat,
                 lon=lon,
-                international_designator=intldesg
+                international_designators=[instance.model.intldesg for instance in instances]
             )
 
             events.append(event)
