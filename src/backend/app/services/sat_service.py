@@ -21,7 +21,7 @@ class SatDataService:
 
         for sat in all_sats:
             if sat.model.intldesg:
-                self._intldesg_to_satellite[sat.model.intldesg] = sat
+                self._intldesg_to_sat[sat.model.intldesg] = sat
         
         # 打ち上げグループをキーにした辞書もキャッシュ
         self._launch_group_to_sats: dict[str, list[EarthSatellite]] = {}
@@ -34,6 +34,8 @@ class SatDataService:
         
         print(f"SatDataService: {len(self._intldesg_to_sat)}機の衛星をキャッシュ完了．")
     
+        self.ts = ts
+
     def get_all_satellites(self) -> dict[str, EarthSatellite]:
         """
         キャッシュされた全ての衛星の辞書 {intldesg: instance} を返す．
