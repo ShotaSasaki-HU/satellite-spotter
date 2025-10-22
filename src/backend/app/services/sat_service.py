@@ -26,7 +26,7 @@ class SatDataService:
         # 打ち上げグループをキーにした辞書もキャッシュ
         self._launch_group_to_sats: dict[str, list[EarthSatellite]] = {}
 
-        for instance in all_sats:
+        for instance in self._intldesg_to_sat.values():
             intldesg = instance.model.intldesg
             launch_group = re.search(r'\d+', intldesg).group()
             self._launch_group_to_sats.setdefault(launch_group, []) # キーが存在しない時のみ空のリストをセット
