@@ -1,5 +1,5 @@
 # app/routers/forecasts.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from skyfield.api import load
 import numpy as np
 from app.schemas import event as schemas_event
@@ -12,10 +12,10 @@ from app.services.sat_service import SatDataService, get_sat_data_service
 router = APIRouter()
 @router.get("/api/v1/forecasts/events", response_model=schemas_event.EventResponse)
 def forecast_events(
-        lat: float,
-        lon: float,
-        limit: int = 10,
-        offset: int = 0,
+        lat: float = Query(...),
+        lon: float = Query(...),
+        limit: int = Query(10),
+        offset: int = Query(0),
         settings: Settings = Depends(get_settings),
         sat_service: SatDataService = Depends(get_sat_data_service)):
     """

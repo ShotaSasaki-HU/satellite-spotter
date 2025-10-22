@@ -1,5 +1,5 @@
 # app/routers/recommendations.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from skyfield.api import load
 import httpx
@@ -14,11 +14,11 @@ from app.core.config import Settings, get_settings
 router = APIRouter()
 @router.get("/api/v1/recommendations/events", response_model=schemas_event.EventResponse)
 async def recommend_events(
-    lat: float,
-    lon: float,
-    radius: int,
-    limit: int = 10,
-    offset: int = 0,
+    lat: float = Query(...),
+    lon: float = Query(...),
+    radius: int = Query(...),
+    limit: int = Query(10),
+    offset: int = Query(0),
     db: Session = Depends(session.get_db),
     settings: Settings = Depends(get_settings),
     sat_service: SatDataService = Depends(get_sat_data_service)):
