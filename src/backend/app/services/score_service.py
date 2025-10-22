@@ -124,8 +124,8 @@ def calc_sky_glow_score(coords_to_sample: list[(float, float)], settings: Settin
     NATURAL_SKY_BRIGHTNESS_MCD_M2 = 0.171168465
     SQM_CONVERSION_CONSTANT = 108000000
     LOG_BASE_FACTOR = -0.4
-    SQM_MIN = 14.0 # 新宿で17.5程度
-    SQM_MAX = 23.0
+    SQM_MIN = settings.SQM_MIN
+    SQM_MAX = settings.SQM_MAX
 
     artificial_brightness = sample_results[:, 0]
     artificial_brightness[artificial_brightness < 0] = 0 # 負の値を0にクリップ

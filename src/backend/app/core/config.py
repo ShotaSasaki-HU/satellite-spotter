@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     LOCAL_DATA_ROOT: Path | None = None
     S3_BUCKET: str | None = None
 
+    SQM_MIN: float
+    SQM_MAX: float
     OPEN_METEO_CONCURRENCY_LIMIT: int
 
     @computed_field

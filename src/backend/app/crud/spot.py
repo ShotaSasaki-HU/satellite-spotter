@@ -4,9 +4,11 @@ from sqlalchemy import func, select, column, cast, Float, case
 from app.models import Spot
 from geoalchemy2.functions import ST_DWithin
 from geoalchemy2.types import Geometry
+from app.core.config import Settings
 
 def get_top_spots_by_static_score(
         db: Session,
+        settings: Settings,
         lat: float,
         lon: float,
         radius_km: int,
@@ -31,8 +33,8 @@ def get_top_spots_by_static_score(
     NATURAL_SKY_BRIGHTNESS_MCD_M2 = 0.171168465
     SQM_CONVERSION_CONSTANT = 108000000
     LOG_BASE_FACTOR = -0.4
-    SQM_MIN = 14.0 # 新宿で17.5程度
-    SQM_MAX = 23.0
+    SQM_MIN = settings.SQM_MIN
+    SQM_MAX = settings.SQM_MAX
     
     sqm_value_expr = func.coalesce( # Spot.wa2015_raw_valueがNULLの場合は，最悪値で計算．
         func.log10(
