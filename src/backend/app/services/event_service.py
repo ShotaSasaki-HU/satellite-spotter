@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 from app.schemas.event import Event, Score
 import pandas as pd
 from app.services.score_service import calc_event_score
+from app.services.sat_service import SatDataService
 import httpx
 import asyncio
 
@@ -35,29 +36,13 @@ def calc_circular_std(rads: list) -> float:
     circular_std_rad = np.sqrt(-2 * np.log(r_bar))
     return circular_std_rad
 
-def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
-    # TLEに記載の衛星群を国際衛星識別番号でグルーピング
-    launch_groups_with_instances = {} # {グループ名: [衛星インスタンスのリスト]}
-    processed_intldesg = set() # 何故か load.tle() において同じ衛星が2重に読まれるため記録
-
-    for instance in sat_instances.values():
-        intldesg = instance.model.intldesg # 国際衛星識別番号
-        if intldesg in processed_intldesg:
-            continue
-        
-        launch_group = re.search(r'\d+', intldesg).group()
-        launch_groups_with_instances.setdefault(launch_group, []) # キーが存在しない時のみ空のリストをセット
-        launch_groups_with_instances[launch_group].append(instance)
-
-        # 処理が成功したら国際衛星識別番号を記録
-        processed_intldesg.add(intldesg)
-    
+def get_potential_trains(launch_group_to_sats, circular_std_threshold: float = 1.0):
     # トレイン状態にある可能性が高いグループを特定
     launch_groups_in_train_form = {}
 
-    for group_name, instances in launch_groups_with_instances.items():
+    for group_name, instances in launch_group_to_sats.items():
         # 手動フィルタ
-        ng_list = ['21059', '24065'] # スターリンク専用
+        ng_list = ['21059', '24065'] # 古いグループなのに仲間が脱落していて標準偏差が小さいなど．
         if group_name in ng_list:
             continue
 
@@ -86,10 +71,10 @@ def get_potential_trains(sat_instances, circular_std_threshold: float = 1.0):
 
     return launch_groups_in_train_form
 
-def get_iss_as_a_group_member(sat_instances, iss_intldesgs: list[str] = ['98067A', '21066A']):
-    for instance in sat_instances.values():
-        intldesg = instance.model.intldesg # 国際衛星識別番号
-        if intldesg in iss_intldesgs:
+def get_iss_as_a_group_member(intldesg_to_sat, iss_intldesgs: list[str] = ['98067A', '21066A']):
+    for intldesg in iss_intldesgs:
+        instance = intldesg_to_sat.get(intldesg, None)
+        if instance:
             launch_group = re.search(r'\d+', intldesg).group()
             return {launch_group: [instance]}
 
@@ -201,8 +186,7 @@ def get_events_for_the_coord(
         elevation_m: float,
         horizon_profile: list[float],
         sky_glow_score: float,
-        starlink_instances, # ファイルI/Oはルーターに任せる．
-        station_instances,
+        sat_service: SatDataService,
         weather_df: pd.DataFrame) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
@@ -216,12 +200,12 @@ def get_events_for_the_coord(
         return []
     
     # 計算対象にする衛星の国際衛星識別符号を特定
-    launch_groups_to_sats = {}
-    launch_groups_to_sats.update(get_potential_trains(sat_instances=starlink_instances))
-    launch_groups_to_sats.update(get_iss_as_a_group_member(sat_instances=station_instances))
+    launch_group_to_sats = {}
+    launch_group_to_sats.update(get_potential_trains(launch_group_to_sats=sat_service.get_launch_groups()))
+    launch_group_to_sats.update(get_iss_as_a_group_member(intldesg_to_sat=sat_service.get_all_satellites()))
 
     # 時刻・検索期間設定
-    ts = load.timescale()
+    ts = sat_service.get_timescale()
     t0 = ts.now()
     t1 = ts.utc(t0.utc_datetime() + timedelta(days=7))
 
@@ -232,7 +216,7 @@ def get_events_for_the_coord(
     eph = load('de421.bsp')
 
     events = []
-    for group_name, instances in launch_groups_to_sats.items():
+    for group_name, instances in launch_group_to_sats.items():
         repre_sat = instances[0] # 処理の軽量化のため代表衛星を適当に定義
 
         # 生の天球イベントを取得

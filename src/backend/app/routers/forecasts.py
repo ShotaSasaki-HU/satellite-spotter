@@ -7,6 +7,7 @@ from app.core.config import Settings, get_settings
 from app.services.dem_service import get_elevations_by_coords, calc_horizon_profile_parallel
 from app.services.event_service import get_events_for_the_coord, get_weather_dataframe_sync
 from app.services.score_service import calc_sky_glow_score
+from app.services.sat_service import SatDataService, get_sat_data_service
 
 router = APIRouter()
 @router.get("/api/v1/forecasts/events", response_model=schemas_event.EventResponse)
@@ -15,11 +16,11 @@ def forecast_events(
         lon: float,
         limit: int = 10,
         offset: int = 0,
-        settings: Settings = Depends(get_settings)):
-    # スポットそれぞれについて観測イベントのリストを取得して統合
-    starlink_instances = load.tle(settings.PATH_TLE_STARLINK)
-    station_instances = load.tle(settings.PATH_TLE_STATIONS)
-
+        settings: Settings = Depends(get_settings),
+        sat_service: SatDataService = Depends(get_sat_data_service)):
+    """
+    スポットそれぞれについて観測イベントのリストを取得して統合する．
+    """
     elevation_m = get_elevations_by_coords(coords=[{'lat': lat, 'lon': lon}],
                                            settings=settings)[0]
     if elevation_m < -1000 or np.isnan(elevation_m):
@@ -47,8 +48,7 @@ def forecast_events(
         elevation_m=elevation_m,
         horizon_profile=horizon_profile,
         sky_glow_score=sky_glow_score,
-        starlink_instances=starlink_instances,
-        station_instances=station_instances,
+        sat_service=sat_service,
         weather_df=weather_df
     )
 

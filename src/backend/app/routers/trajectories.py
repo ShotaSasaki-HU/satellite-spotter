@@ -1,11 +1,12 @@
 # app/routers/trajectories.py
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from datetime import datetime, timezone
-from skyfield.api import load, Topos
+from skyfield.api import Topos
 import numpy as np
 from app.core.config import Settings, get_settings
 from app.schemas.trajectory import Position, Trajectory, TrajectoryResponse
 from app.services.dem_service import get_elevations_by_coords
+from app.services.sat_service import SatDataService, get_sat_data_service
 
 router = APIRouter()
 @router.get("/api/v1/trajectories", response_model=TrajectoryResponse)
@@ -16,27 +17,30 @@ def get_trajectory_details(
         lat: float,
         lon: float,
         international_designators: list[str],
-        settings: Settings = Depends(get_settings)):
+        settings: Settings = Depends(get_settings),
+        sat_service: SatDataService = Depends(get_sat_data_service)):
     """
     指定された期間における，指定された衛星群の時系列的な位置を返す．
     """
-    starlink_instances = load.tle(settings.PATH_TLE_STARLINK)
-    station_instances = load.tle(settings.PATH_TLE_STATIONS)
+    intldesg_to_sat = sat_service.get_all_satellites()
 
     # 国際衛星識別番号で指定されたインスタンスを抽出
     target_instances = []
-    for instance in list(starlink_instances.values()) + list(station_instances.values()):
-        if instance.model.intldesg in international_designators:
+    for intldesg in international_designators:
+        instance = intldesg_to_sat.get(intldesg, None) # O(1)で高速に検索
+        if instance:
             target_instances.append(instance)
-        if len(target_instances) == len(international_designators):
-            break
+    
+    if not target_instances:
+        raise HTTPException(status_code=404, detail="指定された国際衛星識別番号の衛星が見つかりません．")
 
     # 開始時刻と終了時刻から時刻列を作成
-    ts = load.timescale()
+    ts = sat_service.get_timescale()
     t_start = ts.from_datetime(start_time)
     t_end = ts.from_datetime(end_time)
     # 地球時（Terrestrial Time）のユリウス日の数値配列に変換してlinspace
-    tt_values = np.linspace(t_start.tt, t_end.tt, num=30, endpoint=True)
+    SAMPLING_COUNT = 30
+    tt_values = np.linspace(t_start.tt, t_end.tt, num=SAMPLING_COUNT, endpoint=True)
     # skyfield.timelib.Timeの時刻列
     t = ts.tt_jd(tt_values)
 
