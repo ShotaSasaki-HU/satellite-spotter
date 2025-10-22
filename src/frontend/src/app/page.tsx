@@ -1,10 +1,7 @@
-export default function Home() {
+export default function SpotRecommenderPage() {
   return (
-    <main>
-      {/* Tailwind CSS が効いているかチェック！ */}
-      <h1 className="p-10 text-3xl font-bold text-blue-500">
-        Hello, 衛星トラッカー！
-      </h1>
-    </main>
+    <div>
+      <h1 className="text-2xl font-bold">Spot Recommender</h1>
+    </div>
   );
 }
