@@ -5,7 +5,8 @@ import { Inter } from "next/font/google"; // フォントをインポート
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 
-const inter = Inter({ subsets: ["latin"] }); // フォント読み込み
+// アルファベットのみInterフォントで表示
+const inter = Inter({ subsets: ["latin"] });
 
 // サイトのメタデータを定義
 export const metadata: Metadata = {
