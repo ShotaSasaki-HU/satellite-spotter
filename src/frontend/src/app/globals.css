@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+/* カスタムカラー */
+@theme {
+  --color-bg-primary: #0C0C50; /* ブランドカラー */
+  --color-bg-primary-active: #1B1A71;
+  --color-bg-primary-hover: #10105A;
+  --color-bg-secondary: #030435;
+  --color-text-primary: #FFFFFF;
+  --color-text-muted: #9CA3AF;
+  --color-text-active: #0A8FE4;
+}
+
+/* ライト・ダークモードの切り替えが不要なため，デフォルトの記述はコメントアウトする． */
+/*
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -24,3 +37,4 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+*/

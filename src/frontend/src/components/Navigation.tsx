@@ -3,14 +3,14 @@
 
 import Link from "next/link"; // Next.jsのリンク機能．<a>タグより高速な画面遷移．
 import { usePathname } from "next/navigation"; // usePathnameは，現在のURLのパス名を読み取れるクライアントコンポーネントフック
-import { Search } from 'lucide-react';
+import { Search, MousePointerClick, UsersRound } from 'lucide-react';
 
 // ナビゲーションの項目を配列で定義
 // 後でループ処理（.map）を使ってボタンを自動生成できる．
 const navItems = [
-  { href: "/", label: "スポット検索", icon: "あ" },
-  { href: "/my-spot", label: "マイスポット", icon: "あ" },
-  { href: "/report", label: "観測レポート", icon: "あ" }
+  { href: "/", label: "スポット検索", icon: <Search /> },
+  { href: "/my-spot", label: "マイスポット", icon: <MousePointerClick /> },
+  { href: "/report", label: "観測レポート", icon: <UsersRound /> }
 ];
 
 // コンポーネント定義．`export default`で他のファイルから`import`できる．
@@ -20,7 +20,7 @@ export default function Navigation() {
   return (
     <nav
       className={`
-        bg-blue-950 text-white z-50
+        bg-bg-primary text-text-primary z-50
 
         fixed bottom-0 left-0 w-full h-16
         flex flex-row justify-around items-center
@@ -38,15 +38,14 @@ export default function Navigation() {
             href={item.href}
             prefetch={true} // 事前読み込み
             className={`
-              flex items-center justify-center p-2
-              hover:bg-blue-800 transition-colors
+              flex items-center justify-center p-2 w-full
 
-              flex-col text-xs
+              flex-col text-xs h-full
 
-              md:flex-row md:justify-start md:text-base md:p-4
+              md:flex-row md:justify-start md:text-base md:p-4 md:h-auto
 
-              ${isActive ? "text-yellow-400" : "text-gray-300"}
-              ${isActive && "md:bg-blue-900"}
+              ${isActive ? "text-text-active bg-bg-primary-active" :
+                "text-text-primary hover:bg-bg-primary-hover"}
             `}
           >
             <span className="text-2xl md:mr-3">{item.icon}</span>

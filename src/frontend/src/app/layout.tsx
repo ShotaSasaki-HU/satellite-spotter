@@ -10,7 +10,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 // サイトのメタデータを定義
 export const metadata: Metadata = {
-  title: "サテライト・スポッター",
+  title: "Satellite Spotter",
   description: "あなただけの衛星観測スポットを見つけよう！",
 };
 
@@ -23,10 +23,10 @@ export default function RootLayout({
   return (
     <html lang="ja">
       <body
-        className={`${inter.className}
-          bg-black text-white min-h-screen
-          border-8 border-yellow-500 box-border
-        `} // box-border: 枠線のせいでスクロールバーが出るのを防止
+        className={`
+          ${inter.className}
+          bg-bg-secondary text-white min-h-screen
+        `}
       >
         {/* ナビゲーションとメインコンテンツを包むラッパー */}
         <div className="flex flex-col md:flex-row">
