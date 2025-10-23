@@ -39,16 +39,16 @@ export default function Navigation() {
             href={item.href}
             prefetch={true} // 事前読み込み
             className={`
-                flex items-center justify-center p-2
-                hover:bg-blue-800 transition-colors
+              flex items-center justify-center p-2
+              hover:bg-blue-800 transition-colors
 
-                flex-col text-xs
+              flex-col text-xs
 
-                md:flex-row md:justify-start md:text-base md:p-4
+              md:flex-row md:justify-start md:text-base md:p-4
 
-                ${isActive ? "text-yellow-400" : "text-gray-300"}
-                ${isActive && "md:bg-blue-900"}
-              `}
+              ${isActive ? "text-yellow-400" : "text-gray-300"}
+              ${isActive && "md:bg-blue-900"}
+            `}
           >
             <span className="text-2xl md:mr-3">{item.icon}</span>
             <span className="hidden md:inline">{item.label}</span>
