@@ -3,6 +3,7 @@
 
 import Link from "next/link"; // Next.jsのリンク機能．<a>タグより高速な画面遷移．
 import { usePathname } from "next/navigation"; // usePathnameは，現在のURLのパス名を読み取れるクライアントコンポーネントフック
+import { Search } from 'lucide-react';
 
 // ナビゲーションの項目を配列で定義
 // 後でループ処理（.map）を使ってボタンを自動生成できる．
