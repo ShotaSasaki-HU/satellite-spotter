@@ -1,6 +1,4 @@
 // src/components/Navigation.tsx
-// スマホで下タブ，パソコンで左タブを実現するレスポンシブ部品
-
 "use client"; // 「今どのページにいるか」はブラウザ（クライアント）でないと判断できない．
 
 import Link from "next/link"; // Next.jsのリンク機能．<a>タグより高速な画面遷移．
@@ -20,16 +18,16 @@ export default function Navigation() {
 
   return (
     <nav
-      className="
+      className={`
         bg-blue-950 text-white z-50
-                
+
         fixed bottom-0 left-0 w-full h-16
         flex flex-row justify-around items-center
 
         md:fixed md:left-0 md:top-0 md:w-48 md:h-screen
-        md:flex-col md:justify-start md:items-stretch
+        md:flex-col md:justify-start md:items-stretch 
         md:pt-24
-      "
+      `}
     >
       {navItems.map((item) => {
         const isActive = pathname === item.href;
