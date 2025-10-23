@@ -9,9 +9,9 @@ import { usePathname } from "next/navigation"; // usePathnameは，現在のURL�
 // ナビゲーションの項目を配列で定義
 // 後でループ処理（.map）を使ってボタンを自動生成できる．
 const navItems = [
-    { href: "/", label: "スポット検索", icon: "" },
-    { href: "/my-spot", label: "マイスポット", icon: "" },
-    { href: "/report", label: "観測レポート", icon: "" }
+    { href: "/", label: "スポット検索", icon: "あ" },
+    { href: "/my-spot", label: "マイスポット", icon: "あ" },
+    { href: "/report", label: "観測レポート", icon: "あ" }
 ];
 
 // コンポーネント定義．`export default`で他のファイルから`import`できる．
@@ -37,7 +37,23 @@ export default function Navigation() {
                 return(
                     <Link
                         key={item.href}
-                    ></Link>
+                        href={item.href}
+                        prefetch={true} // 事前読み込み
+                        className={`
+                            flex items-center justify-center p-2
+                            hover:bg-blue-800 transition-colors
+
+                            flex-col text-xs
+
+                            md:flex-row md:justify-start md:text-base md:p-4
+
+                            ${isActive ? "text-yellow-400" : "text-gray-300"}
+                            ${isActive && "md:bg-blue-900"}
+                        `}
+                    >
+                        <span className="text-2xl md:mr-3">{item.icon}</span>
+                        <span className="hidden md:inline">{item.label}</span>
+                    </Link>
                 );
             })}
         </nav>
