@@ -1,9 +1,5 @@
 # Lambdaが計算を実行するために必要なライブラリ
 skyfield
-numpy
-pandas
-scipy
-httpx
-# ステップ3 (DynamoDB) と ステップ4 (API Gateway) のために先に入れておく
-boto3 
-# (その他、計算ロジックに必要なライブラリをすべて列挙)
+
+psycopg2-binary # PostgreSQL接続用ライブラリ
+boto3 # AWS SDK

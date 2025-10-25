@@ -1,77 +1,121 @@
+# src/lambda_worker/lambda_handler.py
+import os
+import psycopg2 # PostgreSQL接続
+import boto3 # S3接続
+from skyfield.api import load
 import json
-import numpy as np
-import skyfield # ...
-# from core_logic import calc_horizon_profile, get_events_for_the_coord
+import tempfile
 
-# ----------------------------------------------------
-# (仮) ここに重い計算ロジックを移植
-# ----------------------------------------------------
-def calc_my_spot_logic(lat: float, lon: float) -> dict:
+DB_HOST = os.environ.get('DB_HOST')
+DB_NAME = os.environ.get('DB_NAME')
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
+
+S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
+s3 = boto3.client('s3')
+
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
+
+def get_db_connection():
     """
-    あなたの「マイスポット（7秒）」のロジック。
-    （skyfield, numpy, 稜線計算など）
+    RDSへの接続情報を取得する．
     """
-    print(f"計算開始: ({lat}, {lon})")
-    # ... 7秒間の重い計算 ...
-    # (例: result = calc_horizon_profile(...))
-    print("計算完了")
+    try:
+        conn = psycopg2.connect(
+            host=DB_HOST, database=DB_NAME, user=DB_USER,
+            password=DB_PASSWORD, port=5432, connect_timeout=5
+        )
+        return conn
+    except Exception as e:
+        print(f"!!! DB接続エラー: {e}")
+        raise
 
-    # 最終的なJSON結果を返す
-    return {"message": "MySpot calculation complete", "lat": lat}
-
-def calc_recommendation_logic(lat: float, lon: float) -> dict:
+def load_tle_from_s3(file_key: str):
     """
-    あなたの「スポット検索（10秒）」のロジック。
-    （10地点のスコアリングなど）
+    AWS S3からTLEファイルをLambdaの/tmpにダウンロードし，skyfieldで読み込む．
+    skyfield.api.load.tle() がファイルパス文字列を強く期待するため，一度ダウンロードする．
     """
-    print(f"計算開始: ({lat}, {lon})")
-    # ... 10秒間の重い計算 ...
-    # (例: result = get_top_spots_by_static_score(...))
-    print("計算完了")
+    local_temp_path = os.path.join(tempfile.gettempdir(), os.path.basename(file_key))
 
-    # 最終的なJSON結果を返す
-    return {"message": "Recommendation calculation complete", "lat": lat}
-# ----------------------------------------------------
+    try:
+        print(f"S3ファイルを一時パスにダウンロード中: {S3_BUCKET_NAME}/{file_key} -> {local_temp_path}")
+        s3.download_file(Bucket=S3_BUCKET_NAME, Key=file_key, Filename=local_temp_path)
+        print("ダウンロード完了．")
 
+        satellites = load.tle(local_temp_path)
+        print(f"TLE読み込み完了．{len(satellites)}個の衛星インスタンスをロード．")
+
+        return satellites
+    except Exception as e:
+        print(f"!!! S3からのTLE読み込みエラー: {e}")
+        raise
 
 def lambda_handler(event, context):
     """
-    AWS Lambdaが呼び出すメイン関数
-
-    :param event: FastAPIから渡される入力データ (JSON)
-    :param context: 実行コンテキスト (今は無視してOK)
+    RDSとS3の接続テスト用ハンドラ
     """
     print(f"受信したイベント: {event}")
 
-    # FastAPIから渡された 'job_type' に応じて処理を分岐
-    job_type = event.get('job_type')
-    lat = event.get('lat')
-    lon = event.get('lon')
-    task_id = event.get('task_id') # 👈 ステップ3以降で使います
+    # テスト用のパラメータを引数から取得
+    test_db_query = event.get('test_db_query', None)
+    test_s3_file_key = event.get('test_s3_file_key', None)
 
+    results = {}
+    errors = {}
+
+    # RDS接続テスト
+    conn = None # finallyで閉じるために外で宣言
     try:
-        if job_type == 'MY_SPOT':
-            result_data = calc_my_spot_logic(lat, lon)
-        elif job_type == 'RECOMMENDATION':
-            result_data = calc_recommendation_logic(lat, lon)
-        else:
-            raise ValueError(f"不明なジョブタイプです: {job_type}")
+        conn = get_db_connection()
+        cur = conn.cursor()
+        print(f"RDSテストクエリ実行: {test_db_query}")
+        cur.execute(test_db_query)
+        db_result = cur.fetchone()
+        print(f"RDSクエリ結果: {db_result}")
+        results['db_test'] = f"Query OK, result: {db_result}"
+        cur.close()
+    except Exception as e:
+        print(f"!!! RDSテスト中にエラー: {e}")
+        errors['db_test'] = f"Failed: {e}"
+    finally:
+        if conn:
+            conn.close()
+            print("DB接続を閉鎖．")
 
-        # ----------------------------------------------------
-        # TODO (ステップ3): 結果をDynamoDBに保存する
-        # save_to_dynamodb(task_id, "SUCCESS", result_data)
-        # ----------------------------------------------------
-        print(f"タスク {task_id} 成功")
+    # S3接続テスト
+    try:
+        satellites = load_tle_from_s3(test_s3_file_key)
+        results['s3_test'] = f"Load OK, loaded {len(satellites)} satellites."
+    except Exception as e:
+        print(f"!!! S3テスト中にエラー: {e}")
+        errors['s3_test'] = f"Failed: {e}"
 
+    # --- 結果を返す ---
+    if errors:
+        print(f"テスト中にエラーが発生しました: {errors}")
+        return {
+            'statusCode': 500,
+            'body': json.dumps({
+                'message': 'テスト中にエラーが発生しました．',
+                'errors': errors,
+                'successes': results
+            })
+        }
+    else:
+        print("RDSとS3の接続テスト成功！")
         return {
             'statusCode': 200,
-            'body': json.dumps(result_data)
+            'body': json.dumps({
+                'message': 'RDSとS3の接続テスト成功！',
+                'results': results
+            })
         }
 
-    except Exception as e:
-        # ----------------------------------------------------
-        # TODO (ステップ3): エラーをDynamoDBに保存する
-        # save_to_dynamodb(task_id, "FAILED", str(e))
-        # ----------------------------------------------------
-        print(f"タスク {task_id} 失敗: {e}")
-        raise e # Lambdaに失敗を通知
+"""
+{
+    "test_db_query": "SELECT COUNT(*) FROM spots;",
+    "test_s3_file_key": "tles/stations_latest.txt"
+}
+"""
