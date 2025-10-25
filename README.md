@@ -9,14 +9,18 @@
 ## 使用技術
 <p style="display: inline">
     <!-- フロントエンドのフレームワーク一覧 -->
+    <img src="https://img.shields.io/badge/-Next.js-000000.svg?logo=next.js&style=for-the-badge">
+    <img src="https://img.shields.io/badge/-TailwindCSS-000000.svg?logo=tailwindcss&style=for-the-badge">
+    <img src="https://img.shields.io/badge/-React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB">
     <!-- バックエンドのフレームワーク一覧 -->
     <!-- バックエンドの言語一覧 -->
     <img src="https://img.shields.io/badge/-Python-F2C63C.svg?logo=python&style=for-the-badge">
     <img src="https://img.shields.io/badge/-FastAPI-F2C63C.svg?logo=fastapi&style=for-the-badge">
     <!-- ミドルウェア一覧 -->
-    <img src="https://img.shields.io/badge/-Postgresql-336791.svg?logo=PostgreSQL&style=for-the-badge">
+    <img src="https://img.shields.io/badge/-Postgresql-000000.svg?logo=PostgreSQL&style=for-the-badge">
     <!-- インフラ一覧 -->
-    <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=for-the-badge">
+    <img src="https://img.shields.io/badge/-Docker-000000.svg?logo=docker&style=for-the-badge">
+    <img src="https://img.shields.io/badge/-Amazon%20aws-232F3E.svg?logo=amazon-aws&style=for-the-badge">
 </p>
 
 ## 主な機能
