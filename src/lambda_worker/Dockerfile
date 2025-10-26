@@ -10,7 +10,7 @@ WORKDIR /var/task
 
 # 4. ローカルのコードをコンテナにコピー
 #    (handlerと、もしあれば core_logic.py なども)
-COPY lambda_handler.py .
+COPY *.py .
 # COPY core_logic.py .
 
 # 5. Lambdaの実行コマンドを設定

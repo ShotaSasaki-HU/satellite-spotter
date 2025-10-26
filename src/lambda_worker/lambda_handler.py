@@ -1,66 +1,28 @@
 # src/lambda_worker/lambda_handler.py
-import os
-import psycopg2 # PostgreSQL接続
-import boto3 # S3接続
-from skyfield.api import load
 import json
-import tempfile
-
-DB_HOST = os.environ.get('DB_HOST')
-DB_NAME = os.environ.get('DB_NAME')
-DB_USER = os.environ.get('DB_USER')
-DB_PASSWORD = os.environ.get('DB_PASSWORD')
-
-S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME')
-s3 = boto3.client('s3')
-
-DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME')
-dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(DYNAMODB_TABLE_NAME)
-
-def get_db_connection():
-    """
-    RDSへの接続情報を取得する．
-    """
-    try:
-        conn = psycopg2.connect(
-            host=DB_HOST, database=DB_NAME, user=DB_USER,
-            password=DB_PASSWORD, port=5432, connect_timeout=5
-        )
-        return conn
-    except Exception as e:
-        print(f"!!! DB接続エラー: {e}")
-        raise
-
-def load_tle_from_s3(file_key: str):
-    """
-    AWS S3からTLEファイルをLambdaの/tmpにダウンロードし，skyfieldで読み込む．
-    skyfield.api.load.tle() がファイルパス文字列を強く期待するため，一度ダウンロードする．
-    """
-    local_temp_path = os.path.join(tempfile.gettempdir(), os.path.basename(file_key))
-
-    try:
-        print(f"S3ファイルを一時パスにダウンロード中: {S3_BUCKET_NAME}/{file_key} -> {local_temp_path}")
-        s3.download_file(Bucket=S3_BUCKET_NAME, Key=file_key, Filename=local_temp_path)
-        print("ダウンロード完了．")
-
-        satellites = load.tle(local_temp_path)
-        print(f"TLE読み込み完了．{len(satellites)}個の衛星インスタンスをロード．")
-
-        return satellites
-    except Exception as e:
-        print(f"!!! S3からのTLE読み込みエラー: {e}")
-        raise
+import traceback
+from rds_utils import get_db_connection
+from s3_utils import load_tle_from_s3
+from dynamodb_utils import table
 
 def lambda_handler(event, context):
     """
-    RDSとS3の接続テスト用ハンドラ
+    DynamoDB書き込みテストを含むRDSとS3の接続テスト用ハンドラ
     """
     print(f"受信したイベント: {event}")
 
     # テスト用のパラメータを引数から取得
     test_db_query = event.get('test_db_query', None)
     test_s3_file_key = event.get('test_s3_file_key', None)
+
+    job_type = event.get('job_type', None)
+    task_id = event.get('task_id', None)
+
+    if not task_id:
+        # FastAPIがtask_idを生成して渡すのが必須
+        error_message = "task_idがイベントに含まれていません．"
+        print(f"エラー: {error_message}")
+        return {'statusCode': 400, 'body': json.dumps({'error': error_message})}
 
     results = {}
     errors = {}
@@ -91,8 +53,64 @@ def lambda_handler(event, context):
     except Exception as e:
         print(f"!!! S3テスト中にエラー: {e}")
         errors['s3_test'] = f"Failed: {e}"
+    
+    # DynamoDB書き込みテスト
+    try:
+        # 本番では，FastAPIが先にPENDINGを書き込んでいる．
+        print(f"タスク {task_id}: ステータスを RUNNING に更新中...")
+        # update_itemは項目が存在しない場合，自動的に新規作成する．
+        table.update_item(
+            Key={'task_id': task_id},
+            UpdateExpression="SET job_status = :status, start_time_ms = :start",
+            ExpressionAttributeValues={
+                ':status': 'RUNNING',
+                ':start': context.get_remaining_time_in_millis() # 開始時の残り時間 (参考)
+            }
+        )
+        print(f"タスク {task_id}: ステータス更新完了 (RUNNING)")
 
-    # --- 結果を返す ---
+        result_data = {"message": "Calculation finished after 10.0 seconds."}
+
+        print(f"タスク {task_id}: 結果をDynamoDBに保存中...")
+        table.update_item(
+            Key={'task_id': task_id},
+            UpdateExpression="SET job_status = :status, result_data = :res, end_time_ms = :end",
+            ExpressionAttributeValues={
+                ':status': 'SUCCESS',
+                ':res': json.dumps(result_data), # 結果はJSON文字列
+                ':end': context.get_remaining_time_in_millis()
+            }
+        )
+        print(f"タスク {task_id}: 保存完了 (SUCCESS)")
+    
+    except Exception as e:
+        # --- エラー処理 ---
+        error_message = str(e)
+        error_traceback = traceback.format_exc()
+        print(f"!!! タスク {task_id}: エラー発生 !!!\n{error_traceback}")
+
+        # --- DynamoDB: 失敗時にステータスとエラー情報を保存 ---
+        print(f"タスク {task_id}: エラー情報をDynamoDBに保存中...")
+        try:
+            table.update_item(
+                Key={'task_id': task_id},
+                UpdateExpression="SET job_status = :status, error_message = :err, error_traceback = :tb, end_time_ms = :end",
+                ExpressionAttributeValues={
+                    ':status': 'FAILED',
+                    ':err': error_message,
+                    ':tb': error_traceback,
+                    ':end': context.get_remaining_time_in_millis()
+                }
+            )
+            print(f"タスク {task_id}: エラー情報保存完了 (FAILED)")
+        except Exception as db_error:
+            print(f"★★★ DynamoDBへのエラー書き込みに失敗しました: {db_error}")
+        # ----------------------------------------------------
+
+        print(f"!!! DynamoDBテスト中にエラー: {e}")
+        errors['dynamodb_test'] = f"Failed: {e}"
+
+        # --- 結果を返す ---
     if errors:
         print(f"テスト中にエラーが発生しました: {errors}")
         return {
@@ -104,17 +122,19 @@ def lambda_handler(event, context):
             })
         }
     else:
-        print("RDSとS3の接続テスト成功！")
+        print("RDS・S3・DynamoDBの接続テスト成功！")
         return {
             'statusCode': 200,
             'body': json.dumps({
-                'message': 'RDSとS3の接続テスト成功！',
+                'message': 'RDS・S3・DynamoDBの接続テスト成功！',
                 'results': results
             })
         }
 
 """
 {
+    "task_id": "dynamodb-test-001",
+    "job_type": "TEST",
     "test_db_query": "SELECT COUNT(*) FROM spots;",
     "test_s3_file_key": "tles/stations_latest.txt"
 }
