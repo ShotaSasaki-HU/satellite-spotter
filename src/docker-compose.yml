@@ -3,11 +3,11 @@
 services:
   # APIサーバーの定義
   api:
-    build: ./backend # backend/Dockerfileを使ってビルド
+    build: ./backend/api # backend/api/Dockerfileを使ってビルド
     ports:
       - "8080:80" # PCの8080番をコンテナの80番に接続
     volumes:
-      - ./backend:/app # ソースコードの同期
+      - ./backend/api:/app # ソースコードの同期
       - ${LOCAL_DATA_ROOT}:/data # PCの外付けSSDのパスをコンテナ内の/dataディレクトリとしてマウント
     environment:
       - POSTGRES_USER=${POSTGRES_USER}

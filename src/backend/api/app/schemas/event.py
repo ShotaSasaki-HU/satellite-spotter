@@ -21,7 +21,7 @@ class Event(BaseModel):
     international_designators: list[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class EventResponse(BaseModel):
     total: int

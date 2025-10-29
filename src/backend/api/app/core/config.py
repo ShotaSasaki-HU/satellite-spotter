@@ -1,12 +1,8 @@
 # app/core/config.py
 from functools import lru_cache
 from pydantic import PostgresDsn, computed_field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
-
-# このconfig.pyファイルの絶対パスを取得し，.envファイルのあるsrc/をプロジェクトルートとする．
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-ENV_FILE_PATH = PROJECT_ROOT / '.env'
 
 class Settings(BaseSettings):
     """
@@ -96,9 +92,13 @@ class Settings(BaseSettings):
             raise ValueError("データソースが設定されていません．")
 
     # システム環境変数が見つからなかった場合にココを参照
-    class Config:
-        env_file = ENV_FILE_PATH
-        env_file_encoding = 'utf-8'
+    # Dockerコンテナを起動するときエラーになるため相対パスは設定できない．
+    # api/scripts/*.pyを走らせる時は，.envのあるsrc/をカレントディレクトリにすること．
+    model_config = SettingsConfigDict(
+        env_file = '.env',
+        env_file_encoding = 'utf-8',
+        extra='ignore'
+    )
 
 @lru_cache
 def get_settings() -> Settings:

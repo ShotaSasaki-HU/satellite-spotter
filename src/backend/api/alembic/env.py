@@ -9,7 +9,7 @@ from alembic import context
 
 # --- ▼▼▼ ここから修正・追記 ▼▼▼ ---
 
-# 1. backend/ をPythonの検索パスに追加
+# 1. backend/api/ をPythonの検索パスに追加
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 # 2. .envファイルから環境変数を読み込む

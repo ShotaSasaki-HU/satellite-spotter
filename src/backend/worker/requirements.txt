@@ -1,0 +1,4 @@
+boto3 # AWS SDK
+skyfield
+psycopg2-binary
+sqlalchemy

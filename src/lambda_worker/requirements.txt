@@ -1,5 +1,0 @@
-# Lambdaが計算を実行するために必要なライブラリ
-skyfield
-
-psycopg2-binary # PostgreSQL接続用ライブラリ
-boto3 # AWS SDK
