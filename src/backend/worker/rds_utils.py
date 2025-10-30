@@ -6,6 +6,7 @@ DB_HOST = os.environ.get('DB_HOST')
 DB_NAME = os.environ.get('DB_NAME')
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
+DB_PORT = os.environ.get('DB_PORT', '5432')
 
 def get_db_connection():
     """
@@ -14,7 +15,7 @@ def get_db_connection():
     try:
         conn = psycopg2.connect(
             host=DB_HOST, database=DB_NAME, user=DB_USER,
-            password=DB_PASSWORD, port=5432, connect_timeout=5
+            password=DB_PASSWORD, port=int(DB_PORT), connect_timeout=5
         )
         return conn
     except Exception as e:

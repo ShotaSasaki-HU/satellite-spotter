@@ -18,14 +18,22 @@ class Settings(BaseSettings):
         ・.envファイル
         ・デフォルト値（クラス宣言内）
     """
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_HOST: str = 'localhost' # ローカルスクリプト用のデフォルト値
-    POSTGRES_DB: str
+    DB_HOST: str = 'localhost' # ローカルスクリプト用のデフォルト値
+    DB_PORT: int
+    DB_NAME: str
+    DB_USER: str
+    DB_PASSWORD: str
 
-    # データソース設定
+    AWS_PROFILE: str
+
+    # S3
+    S3_BUCKET_NAME: str | None = None
+    TLE_STARLINK_KEY: str
+    TLE_STATIONS_KEY: str
+    DEM_FOLDER_KEY: str
+    WORLD_ATLAS_KEY: str
+
     LOCAL_DATA_ROOT: Path | None = None
-    S3_BUCKET: str | None = None
 
     SQM_MIN: float
     SQM_MAX: float
@@ -37,37 +45,7 @@ class Settings(BaseSettings):
         """
         他のフィールドの値からDATABASE_URLを構築する．
         """
-        return f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:5432/{self.POSTGRES_DB}"
-    
-    @computed_field
-    @property
-    def PATH_TLE_STARLINK(self) -> str:
-        if self.S3_BUCKET:
-            return f"s3://{self.S3_BUCKET}/tles/sup-gp_starlink_latest.txt"
-        elif self.LOCAL_DATA_ROOT:
-            return str(self.LOCAL_DATA_ROOT / "tles" / "sup-gp_starlink_latest.txt")
-        else:
-            raise ValueError("データソースが設定されていません．")
-    
-    @computed_field
-    @property
-    def PATH_TLE_STATIONS(self) -> str:
-        if self.S3_BUCKET:
-            return f"s3://{self.S3_BUCKET}/tles/stations_latest.txt"
-        elif self.LOCAL_DATA_ROOT:
-            return str(self.LOCAL_DATA_ROOT / "tles" / "stations_latest.txt")
-        else:
-            raise ValueError("データソースが設定されていません．")
-
-    @computed_field
-    @property
-    def PATH_WORLD_ATLAS_2015_TIFF(self) -> str:
-        if self.S3_BUCKET:
-            return f"s3://{self.S3_BUCKET}/World_Atlas_2015/World_Atlas_2015.tif"
-        elif self.LOCAL_DATA_ROOT:
-            return str(self.LOCAL_DATA_ROOT / "World_Atlas_2015" / "World_Atlas_2015.tif")
-        else:
-            raise ValueError("データソースが設定されていません．")
+        return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
     def get_dem_filepath(self, tertiary_meshcode: str) -> str | None:
         """
@@ -83,8 +61,8 @@ class Settings(BaseSettings):
         second = tertiary_meshcode[4:6]
         third = tertiary_meshcode[6:]
 
-        if self.S3_BUCKET:
-            return f"s3://{self.S3_BUCKET}/DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
+        if self.S3_BUCKET_NAME:
+            return f"s3://{self.S3_BUCKET_NAME}/DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
         elif self.LOCAL_DATA_ROOT:
             path_dem_tiff = self.LOCAL_DATA_ROOT / f"DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
             return str(path_dem_tiff) if path_dem_tiff.exists() else None

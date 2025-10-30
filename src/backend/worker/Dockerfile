@@ -11,7 +11,7 @@ WORKDIR /var/task
 # 4. ローカルのコードをコンテナにコピー
 #    (handlerと、もしあれば core_logic.py なども)
 COPY *.py .
-COPY ../de421.bsp .
+COPY de421.bsp .
 
 # 5. Lambdaの実行コマンドを設定
 #    [ファイル名].[関数名] を指定
