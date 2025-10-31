@@ -3,6 +3,9 @@ from functools import lru_cache
 from pydantic import PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
+import boto3
+import tempfile
+import os
 
 class Settings(BaseSettings):
     """
@@ -19,7 +22,7 @@ class Settings(BaseSettings):
         ・デフォルト値（クラス宣言内）
     """
     DB_HOST: str = 'localhost' # ローカルスクリプト用のデフォルト値
-    DB_PORT: int
+    DB_PORT: int = 5432
     DB_NAME: str
     DB_USER: str
     DB_PASSWORD: str
@@ -47,13 +50,52 @@ class Settings(BaseSettings):
         """
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
     
+    @property
+    def s3_client(self):
+        """
+        S3クライアントを初期化して返す．
+        """
+        return boto3.client('s3')
+    
+    def get_usable_filepath(self, file_key: str) -> str:
+        """
+        S3またはローカルのデータにアクセスするためのファイルパスを返す．
+        S3の場合は，/tmpにダウンロードする．
+        """
+        if self.S3_BUCKET_NAME:
+            bucket = self.S3_BUCKET_NAME
+            local_path = os.path.join(tempfile.gettempdir(), file_key) # 例: /tmp/tles/sup-gp_starlink_latest.txt
+            local_dir = os.path.dirname(local_path) # 例: /tmp/tles
+
+            if not os.path.exists(local_path):
+                os.makedirs(local_dir, exist_ok=True) # 親ディレクトリが存在しなければ再帰的に作成
+
+                try:
+                    print(f"S3: Downloading s3://{bucket}/{file_key} -> {local_path}")
+                    self.s3_client.download_file(bucket, file_key, local_path)
+                    print("S3: Download complete.")
+                except Exception as e:
+                    print(f"!!! S3 download error: {e}")
+                    raise FileNotFoundError(f"S3 object not found or error: s3://{bucket}/{file_key}")
+            
+            return local_path
+        
+        elif self.LOCAL_DATA_ROOT:
+            local_path = self.LOCAL_DATA_ROOT / file_key
+            print(f"Local: Accessing {local_path}")
+            if not local_path.exists():
+                raise FileNotFoundError(f"Local file not found: {local_path}")
+            return str(local_path)
+        
+        else:
+            raise ValueError("データソースが設定されていません (S3_BUCKET_NAME も LOCAL_DATA_ROOT も未設定)")
+    
     def get_dem_filepath(self, tertiary_meshcode: str) -> str | None:
         """
         3次メッシュコードに対応するTIFFファイルのパスを返す．
         """
-        tertiary_meshcode = str(tertiary_meshcode)
-
         # メッシュコードが8文字であるか確認
+        tertiary_meshcode = str(tertiary_meshcode)
         if len(tertiary_meshcode) != 8:
             raise ValueError(f"Invalid tertiary meshcode: {tertiary_meshcode}. It must be 8 digits.")
         
@@ -61,13 +103,17 @@ class Settings(BaseSettings):
         second = tertiary_meshcode[4:6]
         third = tertiary_meshcode[6:]
 
-        if self.S3_BUCKET_NAME:
-            return f"s3://{self.S3_BUCKET_NAME}/DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
-        elif self.LOCAL_DATA_ROOT:
-            path_dem_tiff = self.LOCAL_DATA_ROOT / f"DEM5A/{first}/{first}-{second}/{first}-{second}-{third}.tif"
-            return str(path_dem_tiff) if path_dem_tiff.exists() else None
-        else:
-            raise ValueError("データソースが設定されていません．")
+        # S3キーまたはローカルのサブパスを構築
+        file_key = f"{self.DEM_FOLDER_KEY}/{first}/{first}-{second}/{first}-{second}-{third}.tif"
+        
+        try:
+            return self.get_usable_filepath(file_key) # 汎用ヘルパーを呼び出す
+        except FileNotFoundError:
+            # DEMファイルが存在しないのはエラーではないため None を返す．
+            return None
+        except Exception as e:
+            print(f"!!! get_dem_filepath error: {e}")
+            raise
 
     # システム環境変数が見つからなかった場合にココを参照
     # Dockerコンテナを起動するときエラーになるため相対パスは設定できない．

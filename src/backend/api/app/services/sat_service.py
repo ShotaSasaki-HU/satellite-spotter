@@ -1,39 +1,7 @@
 # app/services/sat_service.py
 from skyfield.api import load, EarthSatellite, Timescale
-from app.core.config import get_settings, Settings
+from app.core.config import get_settings
 import re
-import boto3
-import tempfile
-import os
-
-def _load_tle_data(settings: Settings, file_key: str, s3_client):
-    """
-    設定に基づいて S3 または ローカル からTLEをロードするヘルパー関数．
-    """
-    if settings.S3_BUCKET_NAME:
-        # S3モード
-        bucket_name = settings.S3_BUCKET_NAME
-        local_temp_path = os.path.join(tempfile.gettempdir(), os.path.basename(file_key))
-        
-        try:
-            print(f"S3からTLEファイルをダウンロード中: {local_temp_path}")
-            s3_client.download_file(bucket_name, file_key, local_temp_path)
-            print("ダウンロード完了．")
-            return load.tle(local_temp_path)
-        except Exception as e:
-            print(f"!!! S3からのTLE読み込みエラー: {e}")
-            raise
-
-    elif settings.LOCAL_DATA_ROOT:
-        # ローカルモード
-        local_path = settings.LOCAL_DATA_ROOT / file_key
-        print(f"ローカルパスからTLEファイルをロード中: {local_path}")
-        if not local_path.exists():
-            raise FileNotFoundError(f"ローカルファイルが見つかりません: {local_path}")
-        return load.tle(str(local_path))
-
-    else:
-        raise ValueError("データソースが設定されていません．（S3_BUCKET_NAME も LOCAL_DATA_ROOT も未設定）")
 
 class SatDataService:
     """
@@ -44,11 +12,12 @@ class SatDataService:
         print("SatDataService: TLEファイルの読み込みを開始...")
 
         settings = get_settings()
-        
-        s3 = boto3.client('s3')
 
-        starlink_sats = _load_tle_data(settings, settings.TLE_STARLINK_KEY, s3)
-        station_sats = _load_tle_data(settings, settings.TLE_STATIONS_KEY, s3)
+        starlink_path = settings.get_usable_filepath(file_key=settings.TLE_STARLINK_KEY)
+        stations_path = settings.get_usable_filepath(file_key=settings.TLE_STATIONS_KEY)
+
+        starlink_sats = load.tle(starlink_path)
+        station_sats = load.tle(stations_path)
 
         all_sats = list(starlink_sats.values()) + list(station_sats.values())
 
