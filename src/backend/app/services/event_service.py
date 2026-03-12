@@ -243,6 +243,7 @@ def get_events_for_the_coord(
                 event_type = '国際宇宙ステーション（ISS）'
             else:
                 event_type = '不明'
+                continue # 不明なタイプのイベントは，見えない可能性が高いためスキップ．
             
             event = Event(
                 location_name=location_name,
