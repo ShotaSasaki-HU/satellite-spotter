@@ -21,7 +21,7 @@ class Event(BaseModel):
     international_designators: list[str]
 
     class Config:
-        orm_mode = True
+        from_attributes = True # SQLAlchemyモデル（app/models/location.py）から自動でこのデータ構造に変換できるようにする設定
 
 class EventResponse(BaseModel):
     total: int
