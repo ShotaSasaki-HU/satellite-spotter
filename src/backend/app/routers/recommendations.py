@@ -14,14 +14,14 @@ from app.core.config import Settings, get_settings
 router = APIRouter()
 @router.get("/api/v1/recommendations/events", response_model=schemas_event.EventResponse)
 async def recommend_events(
-    lat: float = Query(...),
-    lon: float = Query(...),
-    radius: int = Query(...),
-    limit: int = Query(10),
-    offset: int = Query(0),
-    db: Session = Depends(session.get_db),
-    settings: Settings = Depends(get_settings),
-    sat_service: SatDataService = Depends(get_sat_data_service)):
+        lat: float = Query(...),
+        lon: float = Query(...),
+        radius: int = Query(...),
+        limit: int = Query(10),
+        offset: int = Query(0),
+        db: Session = Depends(session.get_db),
+        settings: Settings = Depends(get_settings),
+        sat_service: SatDataService = Depends(get_sat_data_service)):
     # 探索中心と探索半径を用いて，観測候補スポットのRowオブジェクトのリストを取得．
     potential_spots = crud_spot.get_top_spots_by_static_score(
         db=db, settings=settings, lat=lat, lon=lon, radius_km=radius, limit=10
