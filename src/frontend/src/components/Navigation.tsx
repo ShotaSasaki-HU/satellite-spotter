@@ -24,7 +24,7 @@ export default function Navigation() {
 
         fixed bottom-2 left-2 w-[calc(100%-16px)] h-16
         flex flex-row justify-around items-center
-        divide-x divide-compass-gold-disabled
+        divide-x divide-compass-gold
 
         md:fixed md:left-2 md:top-2 md:w-48 md:h-[calc(100vh-16px)]
         md:flex-col md:justify-start md:items-stretch
