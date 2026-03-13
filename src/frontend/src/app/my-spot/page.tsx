@@ -1,4 +1,4 @@
-// src/app/page.tsx
+// src/app/my-spot/page.tsx
 "use client";
 
 import dynamic from "next/dynamic";
