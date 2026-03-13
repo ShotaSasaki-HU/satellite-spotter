@@ -37,11 +37,8 @@ export default function RootLayout({
           {/* メインコンテンツ */}
           {/* Navigationの分だけレスポンシブにpadding */}
           <main className="w-full pb-16 md:pl-48 md:pb-0">
-            {/* コンテンツが画面端に接触しないための余白 */}
-            <div className="p-4">
-              {/* ページの中身をココに挿入 */}
-              {children}
-            </div>
+            {/* ページの中身をココに挿入 */}
+            {children}
           </main>
         </div>
       </body>
