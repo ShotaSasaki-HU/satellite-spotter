@@ -9,7 +9,7 @@ const Map = dynamic(() => import("@/components/Map"), {
   loading: () => <div className="h-full w-full bg-bg-primary animate-pulse" />,
 });
 
-export default function SpotRecommenderPage() {
+export default function MySpotObserverPage() {
   return (
     <div className="relative w-full h-[calc(100vh-16px-64px)] md:h-[calc(100vh-16px)]">
       {/* 地図コンポーネント */}
