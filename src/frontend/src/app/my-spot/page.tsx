@@ -11,7 +11,7 @@ const Map = dynamic(() => import("@/components/Map"), {
 
 export default function MySpotObserverPage() {
   return (
-    <div className="relative w-full h-[calc(100vh-16px-64px)] md:h-[calc(100vh-16px)]">
+    <div className="relative w-full h-full">
       {/* 地図コンポーネント */}
       <Map />
 

@@ -25,19 +25,19 @@ export default function RootLayout({
       <body
         className={`
           ${inter.className}
-          bg-bg-secondary text-text-primary min-h-screen
+          bg-bg-secondary text-text-primary h-[100dvh]
           border-8 border-compass-gold
           select-none
         `}
       >
         {/* ナビゲーションとメインコンテンツを包むラッパー */}
-        <div className="flex flex-col md:flex-row">
+        <div className="h-full flex flex-col md:flex-row">
           {/* 共通ナビゲーション */}
           <Navigation />
 
           {/* メインコンテンツ */}
           {/* Navigationの分だけレスポンシブにpadding */}
-          <main className="w-full pb-16 md:pl-48 md:pb-0">
+          <main className="w-full h-full pb-16 md:pl-48 md:pb-0">
             {/* ページの中身をココに挿入 */}
             {children}
           </main>
