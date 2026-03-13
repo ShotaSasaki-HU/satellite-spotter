@@ -219,6 +219,14 @@ def get_events_for_the_coord(
     for group_name, instances in launch_group_to_sats.items():
         repre_sat = instances[0] # 処理の軽量化のため代表衛星を適当に定義
 
+        if 'STARLINK' in repre_sat.name:
+            event_type = 'スターリンクトレイン'
+        elif 'ISS' in repre_sat.name:
+            event_type = '国際宇宙ステーション（ISS）'
+        else:
+            event_type = '不明'
+            continue # 不明なタイプのイベントは，見えない可能性が高いためスキップ．
+
         # 生の天球イベントを取得
         raw_passes = get_raw_pass_events(satellite=repre_sat, spot_pos=spot_pos, t0=t0, t1=t1)
         # 天文学的条件でフィルタ
@@ -236,14 +244,6 @@ def get_events_for_the_coord(
                 eph=eph,
                 weather_df=weather_df
             )
-
-            if 'STARLINK' in repre_sat.name:
-                event_type = 'スターリンクトレイン'
-            elif 'ISS' in repre_sat.name:
-                event_type = '国際宇宙ステーション（ISS）'
-            else:
-                event_type = '不明'
-                continue # 不明なタイプのイベントは，見えない可能性が高いためスキップ．
             
             event = Event(
                 location_name=location_name,
