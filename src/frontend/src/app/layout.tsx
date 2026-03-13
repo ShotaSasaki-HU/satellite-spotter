@@ -25,7 +25,8 @@ export default function RootLayout({
       <body
         className={`
           ${inter.className}
-          bg-bg-secondary text-white min-h-screen
+          bg-bg-secondary text-text-primary min-h-screen
+          border-8 border-compass-gold
         `}
       >
         {/* ナビゲーションとメインコンテンツを包むラッパー */}
@@ -34,6 +35,7 @@ export default function RootLayout({
           <Navigation />
 
           {/* メインコンテンツ */}
+          {/* Navigationの分だけレスポンシブにpadding */}
           <main className="w-full pb-16 md:pl-48 md:pb-0">
             {/* コンテンツが画面端に接触しないための余白 */}
             <div className="p-4">

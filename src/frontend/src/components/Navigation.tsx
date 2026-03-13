@@ -22,12 +22,13 @@ export default function Navigation() {
       className={`
         bg-bg-primary text-text-primary z-50
 
-        fixed bottom-0 left-0 w-full h-16
+        fixed bottom-2 left-2 w-[calc(100%-16px)] h-16
         flex flex-row justify-around items-center
+        divide-x divide-compass-gold-disabled
 
-        md:fixed md:left-0 md:top-0 md:w-48 md:h-screen
-        md:flex-col md:justify-start md:items-stretch 
-        md:pt-24
+        md:fixed md:left-2 md:top-2 md:w-48 md:h-[calc(100vh-16px)]
+        md:flex-col md:justify-start md:items-stretch
+        md:divide-x-0
       `}
     >
       {navItems.map((item) => {
@@ -44,8 +45,8 @@ export default function Navigation() {
 
               md:flex-row md:justify-start md:text-base md:p-4 md:h-auto
 
-              ${isActive ? "text-text-active bg-bg-primary-active" :
-                "text-text-primary hover:bg-bg-primary-hover"}
+              ${isActive ? "text-compass-gold bg-bg-primary-active" :
+                "text-text-muted hover:bg-bg-primary-hover"}
             `}
           >
             <span className="text-2xl md:mr-3">{item.icon}</span>

@@ -6,9 +6,17 @@
   --color-bg-primary-active: #1B1A71;
   --color-bg-primary-hover: #141361;
   --color-bg-secondary: #030435;
+
   --color-text-primary: #FFFFFF;
   --color-text-muted: #9CA3AF;
   --color-text-active: #0A8FE4;
+
+  --color-compass-gold: #a08b50;
+  --color-compass-gold-hover: #ba9f64;
+  --color-compass-gold-muted: #a19982;
+  --color-compass-gray: #74726e;
+  --color-compass-gray-hover: #a7a49e;
+  /* --color-compass-green:#15a776; */
 }
 
 /* ライト・ダークモードの切り替えが不要なため，デフォルトの記述はコメントアウトする． */
