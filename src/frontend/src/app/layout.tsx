@@ -27,6 +27,7 @@ export default function RootLayout({
           ${inter.className}
           bg-bg-secondary text-text-primary min-h-screen
           border-8 border-compass-gold
+          select-none
         `}
       >
         {/* ナビゲーションとメインコンテンツを包むラッパー */}
