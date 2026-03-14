@@ -15,8 +15,14 @@ export default function SpotRecommenderPage() {
       {/* 地図コンポーネント */}
       <Map />
 
-      <div className="absolute top-4 left-4 z-1000">
-        <h1 className="text-2xl font-bold">スポット検索</h1>
+      <div
+        className={`
+          absolute top-6 left-0 w-45 md:w-48 h-12
+          flex items-center justify-center
+          bg-bg-primary border-r-2 border-r-compass-gold z-1000
+        `}
+      >
+        <h1 className="text-compass-gold text-xl md:text-2xl">スポット検索</h1>
       </div>
     </div>
   );

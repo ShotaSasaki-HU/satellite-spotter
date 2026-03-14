@@ -8,9 +8,9 @@ import { Search, MousePointerClick, UsersRound } from 'lucide-react';
 // ナビゲーションの項目を配列で定義
 // 後でループ処理（.map）を使ってボタンを自動生成できる．
 const navItems = [
-  { href: "/", label: "スポット検索", icon: <Search /> },
-  { href: "/my-spot", label: "マイスポット", icon: <MousePointerClick /> },
-  { href: "/report", label: "観測レポート", icon: <UsersRound /> }
+  { href: "/", label: "スポット検索", icon: <Search className="w-8 h-8 md:w-6 md:h-6"/> },
+  { href: "/my-spot", label: "マイスポット", icon: <MousePointerClick className="w-8 h-8 md:w-6 md:h-6"/> },
+  { href: "/report", label: "観測レポート", icon: <UsersRound className="w-8 h-8 md:w-6 md:h-6"/> }
 ];
 
 // コンポーネント定義．`export default`で他のファイルから`import`できる．
@@ -49,7 +49,7 @@ export default function Navigation() {
                 "text-text-muted hover:bg-bg-primary-hover"}
             `}
           >
-            <span className="text-2xl md:mr-3">{item.icon}</span>
+            <span className="md:mr-3">{item.icon}</span>
             <span className="hidden md:inline">{item.label}</span>
           </Link>
         );

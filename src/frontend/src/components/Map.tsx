@@ -19,6 +19,7 @@ L.Marker.prototype.options.icon = DefaultIcon;
 export default function Map() {
   return (
     <MapContainer
+      key="satellite-spotter-map" // HMR時のエラー回避のためのキー
       center={[35.68123458125114, 139.7670535579974]} // 初期座標
       zoom={5}
       style={{ height: "100%", width: "100%" }} // 親要素いっぱいに広げる
