@@ -4,6 +4,7 @@ import type { Metadata } from "next"; // メタデータの型定義をインポ
 import { Inter } from "next/font/google"; // フォントをインポート
 import "./globals.css";
 import Navigation from "@/components/Navigation";
+import { Satellite } from 'lucide-react';
 
 // アルファベットのみInterフォントで表示
 const inter = Inter({ subsets: ["latin"] });
@@ -37,7 +38,12 @@ export default function RootLayout({
 
           {/* メインコンテンツ */}
           {/* Navigationの分だけレスポンシブにpadding */}
-          <main className="w-full h-full pb-16 md:pl-48 md:pb-0">
+          <main className="relative w-full h-full pb-16 md:pl-48 md:pb-0">
+            <div className="absolute top-3 right-3 flex items-center z-1000 drop-shadow-lg/75">
+              <Satellite size={36} className="text-text-primary"/>
+              <span className="ml-2 text-2xl text-text-primary">Satellite Spotter</span>
+            </div>
+
             {/* ページの中身をココに挿入 */}
             {children}
           </main>
