@@ -40,8 +40,8 @@ export default function RootLayout({
           {/* Navigationの分だけレスポンシブにpadding */}
           <main className="relative w-full h-full pb-16 md:pl-48 md:pb-0">
             <div className="absolute top-3 right-3 flex items-center z-1000 drop-shadow-lg/75">
-              <Satellite size={36} className="text-text-primary"/>
-              <span className="ml-2 text-2xl text-text-primary">Satellite Spotter</span>
+              <Satellite className="w-6 h-6 md:w-9 md:h-9 text-text-primary"/>
+              <span className="ml-2 text-text-primary text-base md:text-2xl">Satellite Spotter</span>
             </div>
 
             {/* ページの中身をココに挿入 */}
