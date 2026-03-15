@@ -94,7 +94,7 @@ function ResultsContent() {
   }
 
   if (error) {
-    return <div className="text-red-500 p-4 bg-red-500/10 rounded-lg border border-red-500/20">{error}</div>;
+    return <div className="text-red-500 p-4 bg-red-500/10 rounded-lg border border-compass-gold/30 mt-14">{error}</div>;
   }
 
   return (
@@ -105,7 +105,7 @@ function ResultsContent() {
       </div>
 
       {events.length === 0 ? (
-        <div className="text-center p-8 bg-bg-primary rounded-xl border border-white/10">
+        <div className="text-center p-8 bg-bg-primary rounded-xl border border-compass-gold/30">
           <p className="text-text-muted">指定された条件で見えるイベントはありませんでした。</p>
         </div>
       ) : (
