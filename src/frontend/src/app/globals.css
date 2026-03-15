@@ -46,3 +46,35 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 */
+
+@layer base {
+  /* --- WebKit系（Chrome, Edge, SafariのPC版）向けのスクロールバー設定 --- */
+  
+  /* スクロールバー全体の幅 */
+  ::-webkit-scrollbar {
+    width: 6px; /* デフォルトの15px前後から、スタイリッシュな極細に変更 */
+  }
+
+  /* スクロールバーの背景（トラック） */
+  ::-webkit-scrollbar-track {
+    background: transparent; /* 白い背景を完全に透明にして枠線に馴染ませる */
+  }
+
+  /* 動くつまみ部分（サム） */
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2); /* 普段は邪魔にならない半透明の白 */
+    border-radius: 10px; /* 角を丸くしてカプセル状に */
+  }
+
+  /* つまみにマウスを乗せた時（ホバー） */
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-compass-gold);
+  }
+
+  /* --- Firefox向けの設定（FirefoxはWebKit独自の疑似要素が効かないための代替） --- */
+  * {
+    scrollbar-width: thin; /* 細くする */
+    /* つまみの色 / 背景色 の順に指定（※ホバーアクションは未対応） */
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent; 
+  }
+}

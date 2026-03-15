@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Footprints, Bike, CarFront } from 'lucide-react';
 import { useSearchStore } from "@/store/useSearchStore";
+import { useRouter } from "next/navigation";
 
 // SSRを無効化してMapコンポーネントを読み込む
 const Map = dynamic(() => import("@/components/Map"), {
@@ -15,6 +16,7 @@ const Map = dynamic(() => import("@/components/Map"), {
 const TOKYO_STATION = { lat: 35.68126494858904, lon: 139.7670650510304 };
 
 export default function SpotRecommenderPage() {
+  const router = useRouter();
   const { radius, setRadius, pinPosition, setPinPosition } = useSearchStore(); // Zustandから状態と更新関数を取得
   const [step, setStep] = useState<0 | 1>(0); // 0 = ピン立て，1 = 半径入力
   const [mapCenter, setMapCenter] = useState(TOKYO_STATION); // マップの視点の中心座標
@@ -125,10 +127,13 @@ export default function SpotRecommenderPage() {
                 戻る
               </button>
               <button
-                onClick={() => {}}
+                onClick={() => {
+                  // 検索条件をクエリパラメータにして結果ページへ遷移
+                  router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&radius=${radius}`);
+                }}
                 className="text-text-primary bg-compass-gold p-2 cursor-pointer"
               >
-                次へ
+                検索
               </button>
             </div>
           </div>
