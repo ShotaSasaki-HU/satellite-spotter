@@ -2,20 +2,23 @@
 "use client"; // 「今どのページにいるか」はブラウザ（クライアント）でないと判断できない．
 
 import Link from "next/link"; // Next.jsのリンク機能．<a>タグより高速な画面遷移．
-import { usePathname } from "next/navigation"; // usePathnameは，現在のURLのパス名を読み取れるクライアントコンポーネントフック
+import { usePathname, useSearchParams } from "next/navigation"; // usePathnameは，現在のURLのパス名を読み取れるクライアントコンポーネントフック
 import { Search, MousePointerClick, UsersRound } from 'lucide-react';
+import { Suspense } from "react";
 
 // ナビゲーションの項目を配列で定義
 // 後でループ処理（.map）を使ってボタンを自動生成できる．
 const navItems = [
-  { href: "/", label: "スポット検索", icon: <Search className="w-8 h-8 md:w-6 md:h-6"/> },
-  { href: "/my-spot", label: "マイスポット", icon: <MousePointerClick className="w-8 h-8 md:w-6 md:h-6"/> },
+  { href: "/", label: "スポット検索", icon: <Search className="w-8 h-8 md:w-6 md:h-6"/>, sourceKey: "recommender" },
+  { href: "/my-spot", label: "マイスポット", icon: <MousePointerClick className="w-8 h-8 md:w-6 md:h-6"/>, sourceKey: "my-spot" },
   { href: "/report", label: "観測レポート", icon: <UsersRound className="w-8 h-8 md:w-6 md:h-6"/> }
 ];
 
 // コンポーネント定義．`export default`で他のファイルから`import`できる．
 export default function Navigation() {
   const pathname = usePathname(); // 現在のURLパスを格納
+  const searchParams = useSearchParams(); // 現在のクエリパラメータを取得
+  const source = searchParams.get("source");
 
   return (
     <nav
@@ -32,7 +35,13 @@ export default function Navigation() {
       `}
     >
       {navItems.map((item) => {
-        const isActive = pathname === item.href;
+        // 基本は完全一致で光らせる（スポット検索・マイスポットを開いた時）
+        let isActive = pathname === item.href;
+        // URLに source が含まれている場合，自分の sourceKey と一致したら光らせる．（結果画面などにいる時）
+        if (source && source === item.sourceKey) {
+          isActive = true;
+        }
+
         return (
           <Link
             key={item.href}
