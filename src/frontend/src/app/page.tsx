@@ -4,6 +4,7 @@
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Footprints, Bike, CarFront } from 'lucide-react';
+import { useSearchStore } from "@/store/useSearchStore";
 
 // SSRを無効化してMapコンポーネントを読み込む
 const Map = dynamic(() => import("@/components/Map"), {
@@ -14,9 +15,8 @@ const Map = dynamic(() => import("@/components/Map"), {
 const TOKYO_STATION = { lat: 35.68126494858904, lon: 139.7670650510304 };
 
 export default function SpotRecommenderPage() {
+  const { radius, setRadius, pinPosition, setPinPosition } = useSearchStore(); // Zustandから状態と更新関数を取得
   const [step, setStep] = useState<0 | 1>(0); // 0 = ピン立て，1 = 半径入力
-  const [radius, setRadius] = useState<number | "">(10); // デフォルトは10km
-  const [pinPosition, setPinPosition] = useState(TOKYO_STATION); // ピンの座標
   const [mapCenter, setMapCenter] = useState(TOKYO_STATION); // マップの視点の中心座標
   const [searchQuery, setSearchQuery] = useState(""); // 検索クエリ
 
