@@ -26,7 +26,7 @@ export default function RootLayout({
       <body
         className={`
           ${inter.className}
-          bg-bg-secondary text-text-primary h-[100dvh]
+          bg-bg-secondary text-text-primary h-dvh
           border-8 border-compass-gold
           select-none
         `}
