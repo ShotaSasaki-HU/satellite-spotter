@@ -11,18 +11,21 @@ const Map = dynamic(() => import("@/components/Map"), {
   loading: () => <div className="h-full w-full bg-bg-primary animate-pulse" />,
 });
 
+const TOKYO_STATION = { lat: 35.68126494858904, lon: 139.7670650510304 };
+
 export default function SpotRecommenderPage() {
   const [step, setStep] = useState<0 | 1>(0); // 0 = ピン立て，1 = 半径入力
   const [radius, setRadius] = useState<number | "">(10); // デフォルトは10km
-  const [pinPosition, setPinPosition] = useState({ lat: 35.68126494858904, lon: 139.7670650510304 }); // ピンの座標ステート
-  const [searchQuery, setSearchQuery] = useState(""); // 検索クエリのステート
+  const [pinPosition, setPinPosition] = useState(TOKYO_STATION); // ピンの座標
+  const [mapCenter, setMapCenter] = useState(TOKYO_STATION); // マップの視点の中心座標
+  const [searchQuery, setSearchQuery] = useState(""); // 検索クエリ
 
   // エンターキーが押された時の検索処理
   const handleSearch = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && searchQuery.trim() !== "") {
       try {
         // バックエンドのAPIを叩く
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/locations?q=${encodeURIComponent(searchQuery)}&lat=${pinPosition.lat}&lon=${pinPosition.lon}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/locations?q=${encodeURIComponent(searchQuery)}&lat=${mapCenter.lat}&lon=${mapCenter.lon}`);
         const data = await res.json();
 
         if (data.total > 0) {
@@ -41,7 +44,7 @@ export default function SpotRecommenderPage() {
 
   return (
     <div className="relative w-full h-full">
-      <Map pinPosition={pinPosition} setPinPosition={setPinPosition} />
+      <Map pinPosition={pinPosition} setPinPosition={setPinPosition} setMapCenter={setMapCenter}/>
 
       <div
         className={`

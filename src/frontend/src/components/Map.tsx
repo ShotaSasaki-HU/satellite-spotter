@@ -21,10 +21,11 @@ L.Marker.prototype.options.icon = DefaultIcon;
 type MapProps = {
   pinPosition: { lat: number; lon: number };
   setPinPosition: (pos: { lat: number; lon: number }) => void;
+  setMapCenter: (pos: { lat: number; lon: number }) => void;
 };
 
 // 地図のイベント（クリック等）や視点移動を管理するコンポーネント
-function MapController({ pinPosition, setPinPosition}: MapProps) {
+function MapController({ pinPosition, setPinPosition, setMapCenter}: MapProps) {
   const map = useMap();
 
   // クリック（PC）と長押し（スマホのcontextmenu）のイベントを監視
@@ -34,6 +35,11 @@ function MapController({ pinPosition, setPinPosition}: MapProps) {
     },
     contextmenu(e) {
       setPinPosition({ lat: e.latlng.lat, lon: e.latlng.lng });
+    },
+    // 地図の移動（ドラッグやズーム）が終わった瞬間に発火するイベント
+    moveend(e) {
+      const center = e.target.getCenter();
+      setMapCenter({ lat: center.lat, lon: center.lng }); // 現在の視点の中心を親に渡す
     },
   });
 
@@ -50,7 +56,7 @@ function MapController({ pinPosition, setPinPosition}: MapProps) {
   return <Marker position={[pinPosition.lat, pinPosition.lon]} />;
 }
 
-export default function Map({ pinPosition, setPinPosition }: MapProps) {
+export default function Map({ pinPosition, setPinPosition, setMapCenter }: MapProps) {
   return (
     <MapContainer
       key="satellite-spotter-map" // HMR時のエラー回避のためのキー（効いてない？）
@@ -63,7 +69,7 @@ export default function Map({ pinPosition, setPinPosition }: MapProps) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapController pinPosition={pinPosition} setPinPosition={setPinPosition} />
+      <MapController pinPosition={pinPosition} setPinPosition={setPinPosition} setMapCenter={setMapCenter}/>
     </MapContainer>
   );
 }
