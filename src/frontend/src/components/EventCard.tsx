@@ -36,7 +36,7 @@ export default function EventCard({ event }: EventCardProps) {
           {/* スポット名 */}
           <div className="flex items-center justify-start gap-1 text-lg">
             <MapPin size={20} className="text-compass-gold shrink-0" />
-            <span className="truncate">{event.location_name || "観測スポット"}</span>
+            <span className="truncate">{event.location_name || "あなただけの観測スポット"}</span>
           </div>
 
           {/* 開始日時 */}

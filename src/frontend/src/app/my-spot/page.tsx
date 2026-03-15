@@ -84,7 +84,9 @@ export default function MySpotObserverPage() {
           />
           <div className="flex justify-end">
             <button
-              onClick={() => {}}
+              onClick={() => {
+                router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&source=my-spot`);
+              }}
               className="text-text-primary bg-compass-gold p-2 cursor-pointer"
             >
               次へ

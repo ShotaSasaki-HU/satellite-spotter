@@ -129,7 +129,7 @@ export default function SpotRecommenderPage() {
               <button
                 onClick={() => {
                   // 検索条件をクエリパラメータにして結果ページへ遷移
-                  router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&radius=${radius}`);
+                  router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&radius=${radius}&source=recommender`);
                 }}
                 className="text-text-primary bg-compass-gold p-2 cursor-pointer"
               >
