@@ -66,9 +66,9 @@ export default function EventCard({ event }: EventCardProps) {
       {/* 下段 */}
       <div className="flex justify-between items-center">
         <div className="flex flex-col md:flex-row gap-3 text-xs text-text-muted">
-          <span className="flex items-center gap-1"><Building2 size={14} className="text-compass-gold"/>光害：{100 - Math.round(event.scores.sky_glow * 100)}%</span>
-          <span className="flex items-center gap-1"><Moon size={14} className="text-compass-gold"/>月明かり：{100 - Math.round(event.scores.moon_fract_illumi * 100)}%</span>
-          <span className="flex items-center gap-1"><Cloud size={14} className="text-compass-gold"/>雲量：{100 - Math.round(event.scores.cloud * 100)}%</span>
+          <span className="flex items-center gap-1"><Building2 size={14} className="text-compass-gold shrink-0"/>光害：{100 - Math.round(event.scores.sky_glow * 100)}%</span>
+          <span className="flex items-center gap-1"><Moon size={14} className="text-compass-gold shrink-0"/>月明かり：{100 - Math.round(event.scores.moon_fract_illumi * 100)}%</span>
+          <span className="flex items-center gap-1"><Cloud size={14} className="text-compass-gold shrink-0"/>雲量：{100 - Math.round(event.scores.cloud * 100)}%</span>
         </div>
 
         {/* アクションボタン */}
