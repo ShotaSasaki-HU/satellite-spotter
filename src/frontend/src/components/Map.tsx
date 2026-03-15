@@ -1,7 +1,7 @@
 // src/components/Map.tsx
 "use client";
 
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { useEffect } from "react";
@@ -22,10 +22,12 @@ type MapProps = {
   pinPosition: { lat: number; lon: number };
   setPinPosition: (pos: { lat: number; lon: number }) => void;
   setMapCenter: (pos: { lat: number; lon: number }) => void;
+  radius: number | ""; // 半径（km）
+  step: 0 | 1; // 現在のステップ
 };
 
 // 地図のイベント（クリック等）や視点移動を管理するコンポーネント
-function MapController({ pinPosition, setPinPosition, setMapCenter}: MapProps) {
+function MapController({ pinPosition, setPinPosition, setMapCenter, radius, step }: MapProps) {
   const map = useMap();
 
   // クリック（PC）と長押し（スマホのcontextmenu）のイベントを監視
@@ -47,16 +49,36 @@ function MapController({ pinPosition, setPinPosition, setMapCenter}: MapProps) {
   useEffect(() => {
     if (pinPosition) {
       // flyTo(座標, ズーム率, オプション)
-      map.flyTo([pinPosition.lat, pinPosition.lon], 13, {
-        duration: 1.5, // 時間をかけて移動
+      map.flyTo([pinPosition.lat, pinPosition.lon], 12, {
+        duration: 1.0, // 時間をかけて移動
       });
     }
   }, [pinPosition, map]);
 
-  return <Marker position={[pinPosition.lat, pinPosition.lon]} />;
+  const radiusMeters = typeof radius === "number" ? radius * 1000 : 0; // kmをmに変換
+
+  return (
+    <>
+      {/* ステップ2（step === 1）かつradiusが有効な数字の時だけ円を描画 */}
+      {step === 1 && radiusMeters > 0 && (
+        <Circle
+          center={[pinPosition.lat, pinPosition.lon]}
+          radius={radiusMeters}
+          pathOptions={{
+            color: "#ef4444",      // Tailwindのred-500相当の枠線
+            fillColor: "#ef4444",  // 塗りつぶしの色
+            fillOpacity: 0.2,      // 半透明（20%）
+            weight: 2              // 枠線の太さ
+          }}
+        />
+      )}
+
+      <Marker position={[pinPosition.lat, pinPosition.lon]} />
+    </>
+  );
 }
 
-export default function Map({ pinPosition, setPinPosition, setMapCenter }: MapProps) {
+export default function Map({ pinPosition, setPinPosition, setMapCenter, radius, step }: MapProps) {
   return (
     <MapContainer
       key="satellite-spotter-map" // HMR時のエラー回避のためのキー（効いてない？）
@@ -69,7 +91,13 @@ export default function Map({ pinPosition, setPinPosition, setMapCenter }: MapPr
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <MapController pinPosition={pinPosition} setPinPosition={setPinPosition} setMapCenter={setMapCenter}/>
+      <MapController
+        pinPosition={pinPosition}
+        setPinPosition={setPinPosition}
+        setMapCenter={setMapCenter}
+        radius={radius}
+        step={step}
+      />
     </MapContainer>
   );
 }

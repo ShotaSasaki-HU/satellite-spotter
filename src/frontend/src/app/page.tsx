@@ -44,7 +44,13 @@ export default function SpotRecommenderPage() {
 
   return (
     <div className="relative w-full h-full">
-      <Map pinPosition={pinPosition} setPinPosition={setPinPosition} setMapCenter={setMapCenter}/>
+      <Map
+        pinPosition={pinPosition}
+        setPinPosition={setPinPosition}
+        setMapCenter={setMapCenter}
+        radius={radius}
+        step={step}
+      />
 
       <div
         className={`
