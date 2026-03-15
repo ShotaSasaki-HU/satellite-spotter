@@ -83,7 +83,7 @@ export default function Map({ pinPosition, setPinPosition, setMapCenter, radius,
     <MapContainer
       key="satellite-spotter-map" // HMR時のエラー回避のためのキー（効いてない？）
       center={[pinPosition.lat, pinPosition.lon]} // 初期座標
-      zoom={14}
+      zoom={12}
       style={{ height: "100%", width: "100%" }} // 親要素いっぱいに広げる
       zoomControl={false} // UIをスッキリさせるために一旦オフ
     >
