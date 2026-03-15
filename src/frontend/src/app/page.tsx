@@ -60,7 +60,7 @@ export default function SpotRecommenderPage() {
       <div
         className={`
           absolute top-24 left-1/2 -translate-x-1/2
-          bg-bg-primary w-[80%]
+          bg-bg-primary w-[85%] md:w-lg
           border-t-2 border-t-compass-gold z-1000
           p-1
         `}
