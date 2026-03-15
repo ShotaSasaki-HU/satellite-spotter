@@ -1,27 +1,61 @@
 // src/components/Map.tsx
 "use client";
 
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-// Leafletのデフォルトアイコンが消えるバグを防ぐためのおまじない
 import L from "leaflet";
-import icon from "leaflet/dist/images/marker-icon.png";
-import iconShadow from "leaflet/dist/images/marker-shadow.png";
+import { useEffect } from "react";
 
 const DefaultIcon = L.icon({
-  iconUrl: icon.src,
-  shadowUrl: iconShadow.src,
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-export default function Map() {
+// propsの型定義
+type MapProps = {
+  pinPosition: { lat: number; lon: number };
+  setPinPosition: (pos: { lat: number; lon: number }) => void;
+};
+
+// 地図のイベント（クリック等）や視点移動を管理するコンポーネント
+function MapController({ pinPosition, setPinPosition}: MapProps) {
+  const map = useMap();
+
+  // クリック（PC）と長押し（スマホのcontextmenu）のイベントを監視
+  useMapEvents({
+    click(e) {
+      setPinPosition({ lat: e.latlng.lat, lon: e.latlng.lng });
+    },
+    contextmenu(e) {
+      setPinPosition({ lat: e.latlng.lat, lon: e.latlng.lng });
+    },
+  });
+
+  // pinPositionが外部（検索など）から変更されたら，その場所に視点を飛ばす．
+  useEffect(() => {
+    if (pinPosition) {
+      // flyTo(座標, ズーム率, オプション)
+      map.flyTo([pinPosition.lat, pinPosition.lon], 13, {
+        duration: 1.5, // 時間をかけて移動
+      });
+    }
+  }, [pinPosition, map]);
+
+  return <Marker position={[pinPosition.lat, pinPosition.lon]} />;
+}
+
+export default function Map({ pinPosition, setPinPosition }: MapProps) {
   return (
     <MapContainer
-      key="satellite-spotter-map" // HMR時のエラー回避のためのキー
-      center={[35.68123458125114, 139.7670535579974]} // 初期座標
-      zoom={5}
+      key="satellite-spotter-map" // HMR時のエラー回避のためのキー（効いてない？）
+      center={[pinPosition.lat, pinPosition.lon]} // 初期座標
+      zoom={14}
       style={{ height: "100%", width: "100%" }} // 親要素いっぱいに広げる
       zoomControl={false} // UIをスッキリさせるために一旦オフ
     >
@@ -29,6 +63,7 @@ export default function Map() {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <MapController pinPosition={pinPosition} setPinPosition={setPinPosition} />
     </MapContainer>
   );
 }

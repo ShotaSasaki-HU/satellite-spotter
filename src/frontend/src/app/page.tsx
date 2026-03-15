@@ -2,6 +2,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useState } from "react";
+import { Footprints, Bike, CarFront } from 'lucide-react';
 
 // SSRを無効化してMapコンポーネントを読み込む
 const Map = dynamic(() => import("@/components/Map"), {
@@ -10,10 +12,36 @@ const Map = dynamic(() => import("@/components/Map"), {
 });
 
 export default function SpotRecommenderPage() {
+  const [step, setStep] = useState<0 | 1>(0); // 0 = ピン立て，1 = 半径入力
+  const [radius, setRadius] = useState<number | "">(10); // デフォルトは10km
+  const [pinPosition, setPinPosition] = useState({ lat: 35.68126494858904, lon: 139.7670650510304 }); // ピンの座標ステート
+  const [searchQuery, setSearchQuery] = useState(""); // 検索クエリのステート
+
+  // エンターキーが押された時の検索処理
+  const handleSearch = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && searchQuery.trim() !== "") {
+      try {
+        // バックエンドのAPIを叩く
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/locations?q=${encodeURIComponent(searchQuery)}&lat=${pinPosition.lat}&lon=${pinPosition.lon}`);
+        const data = await res.json();
+
+        if (data.total > 0) {
+          // トップの検索結果の座標をピンにセット（これによってMapControllerのflyToが発動する）
+          const topResult = data.locations[0];
+          setPinPosition({ lat: topResult.lat, lon: topResult.lon });
+        } else {
+          alert("該当する場所が見つかりませんでした。");
+        }
+      } catch (error) {
+        console.error("エラー：", error);
+        alert("検索中にエラーが発生しました。");
+      }
+    }
+  };
+
   return (
     <div className="relative w-full h-full">
-      {/* 地図コンポーネント */}
-      <Map />
+      <Map pinPosition={pinPosition} setPinPosition={setPinPosition} />
 
       <div
         className={`
@@ -23,6 +51,79 @@ export default function SpotRecommenderPage() {
         `}
       >
         <h1 className="text-compass-gold text-xl md:text-2xl">スポット検索</h1>
+      </div>
+
+      {/* 浮いているUIボックス */}
+      <div
+        className={`
+          absolute top-24 left-1/2 -translate-x-1/2
+          bg-bg-primary w-[80%]
+          border-t-2 border-t-compass-gold z-1000
+          p-1
+        `}
+      >
+        {/* ステップ1：ピン立てUI */}
+        {step === 0 && (
+          <div>
+            <p className="text-center">１．検索の中心にピンを立ててね。</p>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch} // エンターキーの検知
+              placeholder="地名や公園名を入力"
+              className="block mx-auto my-2 text-text-primary border-compass-gold border rounded-md px-1"
+            />
+            <div className="flex justify-end">
+              <button
+                onClick={() => setStep(1)}
+                className="text-text-primary bg-compass-gold p-2 cursor-pointer"
+              >
+                次へ
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ステップ2：半径入力UI */}
+        {step === 1 && (
+          <div>
+            <p className="text-center">２．検索半径を入力してね。</p>
+            <div className="flex justify-center items-center gap-2 my-2">
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={radius}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setRadius(value === "" ? "" : Number(value));
+                }}
+                className="w-20 text-text-primary text-center border-compass-gold border rounded-md px-1"
+              />
+              <span>km</span>
+            </div>
+            <div className="flex justify-center items-center gap-4 mb-2">
+              <Footprints className="w-8 h-8 text-compass-gold hover:text-compass-gold-hover cursor-pointer" onClick={() => setRadius(5)} />
+              <Bike className="w-8 h-8 text-compass-gold hover:text-compass-gold-hover cursor-pointer" onClick={() => setRadius(15)}/>
+              <CarFront className="w-8 h-8 text-compass-gold hover:text-compass-gold-hover cursor-pointer" onClick={() => setRadius(60)}/>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setStep(0)}
+                className="text-text-primary bg-compass-gray p-2 cursor-pointer"
+              >
+                戻る
+              </button>
+              <button
+                onClick={() => {}}
+                className="text-text-primary bg-compass-gold p-2 cursor-pointer"
+              >
+                次へ
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

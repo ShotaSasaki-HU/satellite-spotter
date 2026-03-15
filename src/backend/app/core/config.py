@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     SQM_MAX: float
     OPEN_METEO_CONCURRENCY_LIMIT: int
 
+    LOCAL_IP_ADDRESS: str
+
     @computed_field
     @property
     def DATABASE_URL(self) -> PostgresDsn:
