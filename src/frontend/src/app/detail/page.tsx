@@ -44,7 +44,7 @@ function DetailContent() {
       try {
         // クエリ配列の構築 (?intldesg=A&intldesg=B...)
         const desgQuery = designators.map(d => `international_designators=${encodeURIComponent(d)}`).join("&");
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/trajectories?location_name=${encodeURIComponent(locationName)}&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}&lat=${lat}&lon=${lon}&${desgQuery}`;
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/trajectories?start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}&lat=${lat}&lon=${lon}&${desgQuery}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error("軌道データの取得に失敗しました");
