@@ -38,7 +38,7 @@ def get_trajectory_details(
     t_start = ts.from_datetime(start_time)
     t_end = ts.from_datetime(end_time)
     # 地球時（Terrestrial Time）のユリウス日の数値配列に変換してlinspace
-    SAMPLING_COUNT = 30
+    SAMPLING_COUNT = 150
     tt_values = np.linspace(t_start.tt, t_end.tt, num=SAMPLING_COUNT, endpoint=True)
     # skyfield.timelib.Timeの時刻配列
     t = ts.tt_jd(tt_values)
