@@ -11,5 +11,4 @@ class Trajectory(BaseModel):
     positions: list[Position]
 
 class TrajectoryResponse(BaseModel):
-    location_name: str
     trajectories: list[Trajectory]

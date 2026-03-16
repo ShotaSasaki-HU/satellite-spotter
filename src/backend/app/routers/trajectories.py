@@ -11,7 +11,6 @@ from app.services.sat_service import SatDataService, get_sat_data_service
 router = APIRouter()
 @router.get("/api/v1/trajectories", response_model=TrajectoryResponse)
 def get_trajectory_details(
-        location_name: str = Query(...),
         start_time: datetime = Query(...),
         end_time: datetime = Query(...),
         lat: float = Query(...),
@@ -48,7 +47,7 @@ def get_trajectory_details(
                                            settings=settings)[0]
     if elevation_m < -1000 or np.isnan(elevation_m):
         print(f"⚠️ 警告: 観測地点 ({lat}, {lon}) の標高が取得できませんでした．")
-        return TrajectoryResponse(location_name=location_name, trajectories=[])
+        return TrajectoryResponse(trajectories=[])
     
     observer = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
 
@@ -88,4 +87,4 @@ def get_trajectory_details(
         )
         trajectories.append(trajectory)
 
-    return TrajectoryResponse(location_name=location_name, trajectories=trajectories)
+    return TrajectoryResponse(trajectories=trajectories)

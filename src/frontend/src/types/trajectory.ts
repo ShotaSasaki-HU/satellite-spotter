@@ -11,6 +11,5 @@ export interface Trajectory {
 }
 
 export interface TrajectoryResponse {
-  location_name: string;
   trajectories: Trajectory[];
 }

@@ -22,6 +22,7 @@ const SkySimulator = dynamic(() => import("@/components/SkySimulator"), {
 
 function DetailContent() {
   const searchParams = useSearchParams();
+  const locationName = searchParams.get("location_name") || "観測スポット";
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
   const startTime = searchParams.get("start_time");
@@ -43,7 +44,7 @@ function DetailContent() {
       try {
         // クエリ配列の構築 (?intldesg=A&intldesg=B...)
         const desgQuery = designators.map(d => `international_designators=${encodeURIComponent(d)}`).join("&");
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/trajectories?location_name=${encodeURIComponent("観測スポット")}&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}&lat=${lat}&lon=${lon}&${desgQuery}`;
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/trajectories?location_name=${encodeURIComponent(locationName)}&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}&lat=${lat}&lon=${lon}&${desgQuery}`;
 
         const res = await fetch(url);
         if (!res.ok) throw new Error("軌道データの取得に失敗しました");
@@ -96,7 +97,7 @@ function DetailContent() {
           <span className="text-compass-gold font-mono text-xl tracking-wider">
             {currentTimeStr}
           </span>
-          <span className="text-xs text-text-muted">{data.location_name}</span>
+          <span className="text-xs text-text-muted">{locationName}</span>
         </div>
         
         {/* レンジスライダー */}

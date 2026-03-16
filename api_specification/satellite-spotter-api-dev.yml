@@ -176,13 +176,6 @@ paths: # エンドポイント
     get:
       summary: 特定のイベントの軌道とスコア詳細を取得する．
       parameters:
-        - name: location_name
-          in: query
-          required: true
-          description: 公園や展望台の名前
-          schema:
-            type: string
-            example: "鏡山公園"
         - name: start_time
           in: query
           required: true
@@ -230,10 +223,6 @@ paths: # エンドポイント
               schema:
                 type: object
                 properties:
-                  location_name:
-                    type: string
-                    description: 公園や展望台の名前
-                    example: "鏡山公園"
                   trajectories:
                     type: array
                     items:
