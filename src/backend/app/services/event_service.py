@@ -253,7 +253,8 @@ def get_events_for_the_coord(
                 event_type=event_type,
                 lat=lat,
                 lon=lon,
-                international_designators=[instance.model.intldesg for instance in instances]
+                international_designators=[instance.model.intldesg for instance in instances],
+                horizon_profile=horizon_profile
             )
 
             events.append(event)

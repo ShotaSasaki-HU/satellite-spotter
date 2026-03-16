@@ -18,6 +18,7 @@ export interface Event {
   lat: number;
   lon: number;
   international_designators: string[];
+  horizon_profile: number[]; // 天球シミュレータで使用
 }
 
 export interface EventResponse {

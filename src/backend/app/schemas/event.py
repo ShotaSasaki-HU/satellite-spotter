@@ -19,6 +19,7 @@ class Event(BaseModel):
     lat: float
     lon: float
     international_designators: list[str]
+    horizon_profile: list[float] # 天球シミュレータで使用
 
     class Config:
         from_attributes = True # SQLAlchemyモデル（app/models/location.py）から自動でこのデータ構造に変換できるようにする設定

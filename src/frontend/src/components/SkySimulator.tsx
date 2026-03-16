@@ -1,11 +1,12 @@
 // src/components/SkySimulator.tsx
 "use client";
 
-import { useRef } from "react";
+import { useRef, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Sky, OrbitControls, Stars, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { Position } from "@/types/trajectory";
+import { useSimulationStore } from "@/store/useSimulationStore";
 
 interface SkySimulatorProps {
   currentPositions: Position[];
@@ -58,7 +59,93 @@ function SatellitePoint({ pos }: { pos: Position }) {
   );
 }
 
+// 地平線のシルエットを描画するコンポーネント
+function HorizonSilhouette({ profile }: { profile: number[] | null }) {
+  // 毎フレーム計算すると重いので、データが変わった時だけジオメトリを生成する（useMemo）
+  const geometry = useMemo(() => {
+    // データが無い場合は、ただの「平地（仰角0度）」のダミー配列を作る
+    const data = profile && profile.length > 0 ? profile : [0, 0, 0, 0, 0, 0, 0, 0];
+    const N = data.length;
+    
+    // 衛星は，RADIUS=50．
+    const RADIUS_HORIZON = 49; 
+    
+    const positions = []; // 頂点のXYZ座標
+    const indices = []; // 頂点を結んで三角形を作る順番
+
+    // 0 から N までループ（最後は 0 度に戻って壁を閉じるため i <= N とする）
+    for (let i = 0; i <= N; i++) {
+      // 方位角（az）を計算。i=0なら0度、i=Nなら360度
+      const az = (i / N) * 360;
+      // 仰角（alt）を取得。最後の要素は0番目と同じ高さにする
+      const alt = i === N ? data[0] : data[i];
+
+      const azRad = THREE.MathUtils.degToRad(az);
+      const topAltRad = THREE.MathUtils.degToRad(alt);
+      const bottomAltRad = THREE.MathUtils.degToRad(0); // 地面は仰角0度とする．
+
+      // 頂点A：稜線上の点（上）
+      positions.push(
+        RADIUS_HORIZON * Math.cos(topAltRad) * Math.sin(azRad),
+        RADIUS_HORIZON * Math.sin(topAltRad),
+        -RADIUS_HORIZON * Math.cos(topAltRad) * Math.cos(azRad)
+      );
+
+      // 頂点B：地面の点（下）
+      positions.push(
+        RADIUS_HORIZON * Math.cos(bottomAltRad) * Math.sin(azRad),
+        RADIUS_HORIZON * Math.sin(bottomAltRad),
+        -RADIUS_HORIZON * Math.cos(bottomAltRad) * Math.cos(azRad)
+      );
+
+      // ポリゴン生成：隣り合う頂点を結んで四角形（三角形 * 2）を作る．
+      if (i < N) {
+        const tl = 2 * i;           // 左上
+        const bl = 2 * i + 1;       // 左下
+        const tr = 2 * (i + 1);     // 右上
+        const br = 2 * (i + 1) + 1; // 右下
+
+        indices.push(tl, bl, tr); // 三角形1
+        indices.push(tr, bl, br); // 三角形2
+      }
+    }
+
+    // Three.jsのジオメトリオブジェクトに組み立てる
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+    geom.setIndex(indices);
+    geom.computeVertexNormals();
+    return geom;
+  }, [profile]);
+
+  // ポリゴンの上辺（稜線）だけを抽出した線（EdgesGeometry）を作る
+  const edgesGeometry = useMemo(() => {
+    return new THREE.EdgesGeometry(geometry, 1); // 角度の閾値を調整して稜線だけを抽出
+  }, [geometry]);
+
+  return (
+    <group>
+      {/* 黒いシルエット本体 */}
+      <mesh geometry={geometry}>
+        {/* opacityで星空を少しだけ透けさせる */}
+        <meshBasicMaterial color="#0f172a" side={THREE.DoubleSide} transparent opacity={0.85} />
+      </mesh>
+      
+      {/* 稜線をなぞるゴールドの輪郭線 */}
+      <lineSegments geometry={edgesGeometry}>
+        <lineBasicMaterial color="#d4af37" transparent opacity={0.5} />
+      </lineSegments>
+    </group>
+  );
+}
+
 export default function SkySimulator({ currentPositions }: SkySimulatorProps) {
+  const { horizonProfile } = useSimulationStore();
+
+  const RADIUS_LABEL = 48;
+  const LABEL_SIZE = 2;
+  const LABEL_Y = 2;
+
   return (
     <Canvas camera={{ position: [0, 0.01, 0], fov: 75 }}
     >
@@ -79,14 +166,16 @@ export default function SkySimulator({ currentPositions }: SkySimulatorProps) {
       <gridHelper args={[200, 50, "#444", "#222"]} position={[0, -0.1, 0]} />
       
       {/* 方角ラベル */}
-      <Text position={[50 * Math.sin(Math.PI), 3, 50 * Math.cos(Math.PI)]} fontSize={3} color="white" rotation={[0, 0, 0]}>北</Text>
-      <Text position={[50 * Math.sin(Math.PI * 3 / 4), 3, 50 * Math.cos(Math.PI * 3 / 4)]} fontSize={3} color="white" rotation={[0, - Math.PI / 4, 0]}>北東</Text>
-      <Text position={[50 * Math.sin(Math.PI / 2), 3, 50 * Math.cos(Math.PI / 2)]} fontSize={3} color="white" rotation={[0, - Math.PI / 2, 0]}>東</Text>
-      <Text position={[50 * Math.sin(Math.PI / 4), 3, 50 * Math.cos(Math.PI / 4)]} fontSize={3} color="white" rotation={[0, - Math.PI * 3 / 4, 0]}>南東</Text>
-      <Text position={[50 * Math.sin(0), 3, 50 * Math.cos(0)]} fontSize={3} color="white" rotation={[0, Math.PI, 0]}>南</Text>
-      <Text position={[50 * Math.sin(- Math.PI / 4), 3, 50 * Math.cos(- Math.PI / 4)]} fontSize={3} color="white" rotation={[0, Math.PI * 3 / 4, 0]}>南西</Text>
-      <Text position={[50 * Math.sin(- Math.PI / 2), 3, 50 * Math.cos(- Math.PI / 2)]} fontSize={3} color="white" rotation={[0, Math.PI / 2, 0]}>西</Text>
-      <Text position={[50 * Math.sin(- Math.PI * 3 / 4), 3, 50 * Math.cos(Math.PI * 3 / 4)]} fontSize={3} color="white" rotation={[0, Math.PI / 4, 0]}>北西</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(Math.PI), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI)]} fontSize={LABEL_SIZE} color="white" rotation={[0, 0, 0]}>北</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(Math.PI * 3 / 4), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI * 3 / 4)]} fontSize={LABEL_SIZE} color="white" rotation={[0, - Math.PI / 4, 0]}>北東</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(Math.PI / 2), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI / 2)]} fontSize={LABEL_SIZE} color="white" rotation={[0, - Math.PI / 2, 0]}>東</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(Math.PI / 4), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI / 4)]} fontSize={LABEL_SIZE} color="white" rotation={[0, - Math.PI * 3 / 4, 0]}>南東</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(0), LABEL_Y, RADIUS_LABEL * Math.cos(0)]} fontSize={LABEL_SIZE} color="white" rotation={[0, Math.PI, 0]}>南</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(- Math.PI / 4), LABEL_Y, RADIUS_LABEL * Math.cos(- Math.PI / 4)]} fontSize={LABEL_SIZE} color="white" rotation={[0, Math.PI * 3 / 4, 0]}>南西</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(- Math.PI / 2), LABEL_Y, RADIUS_LABEL * Math.cos(- Math.PI / 2)]} fontSize={LABEL_SIZE} color="white" rotation={[0, Math.PI / 2, 0]}>西</Text>
+      <Text position={[RADIUS_LABEL * Math.sin(- Math.PI * 3 / 4), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI * 3 / 4)]} fontSize={LABEL_SIZE} color="white" rotation={[0, Math.PI / 4, 0]}>北西</Text>
+
+      <HorizonSilhouette profile={horizonProfile} />
 
       {/* 現在時刻の衛星たちを描画 */}
       {currentPositions.map((pos) => (
