@@ -156,6 +156,7 @@ export default function SkySimulator({ currentPositions }: SkySimulatorProps) {
         enableZoom={false}
         minPolarAngle={THREE.MathUtils.degToRad(75)}
         maxPolarAngle={Math.PI}
+        rotateSpeed={-0.5}
       />
       
       {/* リアルな星空と夜空の背景 */}
