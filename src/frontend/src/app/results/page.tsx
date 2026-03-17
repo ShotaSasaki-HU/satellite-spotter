@@ -159,7 +159,11 @@ function ResultsContent() {
             ) : (
               <div className="flex flex-col gap-3">
                 {events.map((event, index) => (
-                  <EventCard key={`${event.lat}-${event.lon}-${event.start_time}-${index}`} event={event} />
+                  <EventCard
+                    key={`${event.lat}-${event.lon}-${event.start_time}-${index}`}
+                    event={event}
+                    source={source}
+                  />
                 ))}
 
                 {events.length < total && (

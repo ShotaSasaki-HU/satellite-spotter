@@ -6,9 +6,10 @@ import { useSimulationStore } from "@/store/useSimulationStore";
 
 interface EventCardProps {
   event: Event;
+  source: string | null; // どちらのページから来たか（SpotRecommenderPage or MySpotObserverPage）
 }
 
-export default function EventCard({ event }: EventCardProps) {
+export default function EventCard({ event, source }: EventCardProps) {
   const { setHorizonProfile } = useSimulationStore();
 
   // 日付と時刻のフォーマット（ISO文字列 -> 見やすい形式へ）
@@ -31,6 +32,7 @@ export default function EventCard({ event }: EventCardProps) {
   // 総合評価を算出（例として visibility を 0〜100点として星評価っぽく見せる等。今回は数値をそのまま表示）
   const scoreValue = Math.round(event.scores.visibility * 100);
 
+  // 詳細画面に渡すパラメータの構築
   const params = new URLSearchParams({
     location_name: event.location_name,
     lat: String(event.lat),
@@ -38,6 +40,9 @@ export default function EventCard({ event }: EventCardProps) {
     start_time: event.start_time,
     end_time: event.end_time,
   });
+  if (source) {
+    params.append("source", source);
+  }
   event.international_designators.forEach(d =>
     params.append("intldesg", d)
   );
@@ -100,7 +105,6 @@ export default function EventCard({ event }: EventCardProps) {
 
           {/* 詳細（天球シミュレーション）へ */}
           <Link
-            // 実際はイベントのユニークIDなどを渡すのが望ましいが，今回は時刻や座標をキーにする．
             href={`/detail?${params.toString()}`}
             className="p-2 rounded-lg bg-compass-gold hover:bg-compass-gold-hover text-text-primary transition flex items-center gap-1 text-sm"
             onClick={() => setHorizonProfile(event.horizon_profile)}
