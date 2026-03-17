@@ -1,7 +1,8 @@
 # app/services/event_service.py
 import numpy as np
 import re
-from skyfield.api import Topos, load, EarthSatellite
+from skyfield.api import Topos, load, EarthSatellite, Timescale, Time
+from skyfield.jpllib import SpiceKernel
 from datetime import datetime, timedelta, timezone
 from app.schemas.event import Event, Score
 import pandas as pd
@@ -179,6 +180,85 @@ def get_weather_dataframe_sync(lat: float, lon: float, elevation_m: float) -> pd
             return await get_weather_dataframe(lat, lon, elevation_m, client)
     return asyncio.run(_runner())
 
+def is_visible_group_at_the_moment(
+        sats: list[EarthSatellite],
+        spot_pos: Topos,
+        eph: SpiceKernel,
+        ts: Timescale,
+        t_check: Time) -> bool:
+    """
+    グループ内の衛星のうち少なくとも1機が，指定した時刻に見えるか判定する．
+
+    Args:
+        sats (list[EarthSatellite]): グループ内の全衛星のインスタンス
+        spot_pos (Topos): 観測地点
+        eph (SpiceKernel): 天体暦
+        ts (Timescale): タイムスケール
+        t_check (Time): チェック対象の時刻
+    Returns:
+        (bool): グループ内の少なくとも1機が見える場合True
+    """
+    sun, earth = eph['sun'], eph['earth']
+    t = ts.tt_jd([t_check.tt])
+
+    sun_alt = (earth + spot_pos).at(t).observe(sun).apparent().altaz()[0].degrees
+    if sun_alt > -6: # そもそも太陽が高ければ即終了
+        return False
+
+    for sat in sats:
+        sat_alt = (sat - spot_pos).at(t).altaz()[0].degrees
+        if sat_alt <= 0: # 衛星が地平線より下なら日照判定をスキップ
+            continue
+
+        is_sun_lit = sat.at(t).is_sunlit(eph)[0] # 衛星に太陽光が当たっているかの真偽値
+        if is_sun_lit: # 1機でも条件を満たす衛星が見つかれば即終了
+            return True
+
+    return False
+
+def extend_event_period_for_the_group(
+        event: Event,
+        sats: list[EarthSatellite],
+        spot_pos: Topos,
+        eph: SpiceKernel,
+        ts: Timescale,) -> Event:
+    """
+    代表衛星のイベント期間を，グループ内の全衛星のイベント期間（開始時刻と終了時刻）に拡張する．
+
+    Args:
+        event (Event): 代表衛星のイベント
+        sats (list[EarthSatellite]): グループ内の全衛星のインスタンス
+        spot_pos (Topos): 観測地点
+        eph (SpiceKernel): 天体暦
+        ts (Timescale): タイムスケール
+    Returns:
+        (Event): 代表衛星のイベント期間をグループ用に拡張したイベント
+    """
+    # イベント期間の開始時刻を徐々に前に遡る．
+    extended_start = event.start_time
+    current_time = datetime.fromisoformat(event.start_time)
+    while True:
+        current_time -= timedelta(seconds=30)
+        t_check = ts.utc(current_time)
+        if not is_visible_group_at_the_moment(sats, spot_pos, eph, ts, t_check):
+            break
+        extended_start = current_time.astimezone(timezone.utc).isoformat()
+
+    # イベント期間の終了時刻を徐々に後に延ばす．
+    extended_end = event.end_time
+    current_time = datetime.fromisoformat(event.end_time)
+    while True:
+        current_time += timedelta(seconds=30)
+        t_check = ts.utc(current_time)
+        if not is_visible_group_at_the_moment(sats, spot_pos, eph, ts, t_check):
+            break
+        extended_end = current_time.astimezone(timezone.utc).isoformat()
+
+    event.start_time = extended_start
+    event.end_time = extended_end
+
+    return event
+
 def get_events_for_the_coord(
         location_name: str, # スポット以外の場合は空文字列を渡す．
         lat: float,
@@ -225,7 +305,7 @@ def get_events_for_the_coord(
             event_type = '国際宇宙ステーション（ISS）'
         else:
             event_type = '不明'
-            continue # 不明なタイプのイベントは，見えない可能性が高いためスキップ．
+            continue # 不明なタイプのイベントは，価値が低いためスキップ．
 
         # 生の天球イベントを取得
         raw_passes = get_raw_pass_events(satellite=repre_sat, spot_pos=spot_pos, t0=t0, t1=t1)
@@ -256,6 +336,10 @@ def get_events_for_the_coord(
                 international_designators=[instance.model.intldesg for instance in instances],
                 horizon_profile=horizon_profile
             )
+
+            # 代表衛星のイベント期間を，グループ内の全衛星のイベント期間（開始時刻と終了時刻）に拡張する．
+            event: Event = extend_event_period_for_the_group(event=event, sats=instances,
+                                                             spot_pos=spot_pos, eph=eph, ts=ts)
 
             events.append(event)
 
