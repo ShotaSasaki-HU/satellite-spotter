@@ -5,6 +5,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrajectoryResponse } from "@/types/trajectory";
 import { Loader2, ChevronLeft, Play, Pause } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import dynamic from "next/dynamic";
 const SkySimulator = dynamic(() => import("@/components/SkySimulator"), {
@@ -20,6 +21,8 @@ const SkySimulator = dynamic(() => import("@/components/SkySimulator"), {
 });
 
 function DetailContent() {
+  const router = useRouter();
+
   const searchParams = useSearchParams();
   const locationName = searchParams.get("location_name") || "観測スポット";
   const lat = searchParams.get("lat");
@@ -89,7 +92,7 @@ function DetailContent() {
       >
         <div className="w-full flex justify-center items-center gap-3">
           {/* ブラウザバック */}
-          <button onClick={() => window.history.back()}>
+          <button onClick={() => router.back()}>
             <ChevronLeft size={30} className="text-compass-gray hover:text-compass-gray-hover"/>
           </button>
           <h1 className="text-compass-gold text-xl md:text-2xl">見えかた</h1>
