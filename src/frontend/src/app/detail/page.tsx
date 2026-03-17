@@ -37,7 +37,7 @@ function DetailContent() {
   const [error, setError] = useState("");
   
   const [timeIndex, setTimeIndex] = useState(0); // スライダーのインデックス
-  const [isPlaying, setIsPlaying] = useState(false); // 再生状態
+  const [isPlaying, setIsPlaying] = useState(true); // 再生状態
   const [playbackSpeed, setPlaybackSpeed] = useState(1); // 再生速度
 
   useEffect(() => {
