@@ -132,9 +132,9 @@ function HorizonSilhouette({ profile }: { profile: number[] | null }) {
       </mesh>
       
       {/* 稜線をなぞるゴールドの輪郭線 */}
-      <lineSegments geometry={edgesGeometry}>
+      {/* <lineSegments geometry={edgesGeometry}>
         <lineBasicMaterial color="#d4af37" transparent opacity={0.5} />
-      </lineSegments>
+      </lineSegments> */}
     </group>
   );
 }
