@@ -19,6 +19,7 @@ async def recommend_events(
         radius: int = Query(...),
         limit: int = Query(10),
         offset: int = Query(0),
+        min_visibility_score: float = Query(0.3),
         db: Session = Depends(session.get_db),
         settings: Settings = Depends(get_settings),
         sat_service: SatDataService = Depends(get_sat_data_service)):
@@ -57,7 +58,8 @@ async def recommend_events(
             horizon_profile=row.horizon_profile,
             sky_glow_score=row.sky_glow_score,
             sat_service=sat_service,
-            weather_df=weather_df
+            weather_df=weather_df,
+            min_visibility_score=min_visibility_score
         )
         if events_for_the_spot:
             unified_events.extend(events_for_the_spot)

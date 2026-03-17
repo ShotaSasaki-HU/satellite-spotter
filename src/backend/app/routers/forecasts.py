@@ -16,6 +16,7 @@ def forecast_events(
         lon: float = Query(...),
         limit: int = Query(10),
         offset: int = Query(0),
+        min_visibility_score: float = Query(0.3),
         settings: Settings = Depends(get_settings),
         sat_service: SatDataService = Depends(get_sat_data_service)):
     """
@@ -49,7 +50,8 @@ def forecast_events(
         horizon_profile=horizon_profile,
         sky_glow_score=sky_glow_score,
         sat_service=sat_service,
-        weather_df=weather_df
+        weather_df=weather_df,
+        min_visibility_score=min_visibility_score
     )
 
     # visibilityが高い順にソート

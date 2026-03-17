@@ -98,6 +98,14 @@ paths: # エンドポイント
             maximum: 125
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
+        - name: min_visibility_score
+          in: query
+          required: false
+          description: このスコア未満のイベントは除外する．
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
       responses:
         '200':
           description: 成功時のレスポンス
@@ -144,6 +152,14 @@ paths: # エンドポイント
             $ref: '#/components/schemas/Longitude'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Offset'
+        - name: min_visibility_score
+          in: query
+          required: false
+          description: このスコア未満のイベントは除外する．
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
       responses:
         '200':
           description: 成功時のレスポンス

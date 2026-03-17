@@ -267,7 +267,8 @@ def get_events_for_the_coord(
         horizon_profile: list[float],
         sky_glow_score: float,
         sat_service: SatDataService,
-        weather_df: pd.DataFrame) -> list[Event]:
+        weather_df: pd.DataFrame,
+        min_visibility_score: float) -> list[Event]:
     """
     単一の座標に対して，観測可能なイベントのリストを取得する．
     """
@@ -324,6 +325,10 @@ def get_events_for_the_coord(
                 eph=eph,
                 weather_df=weather_df
             )
+
+            # 計算量の削減のため，明らかにスコアの低いイベントを切る．
+            if scores.visibility < min_visibility_score:
+                continue
             
             event = Event(
                 location_name=location_name,
