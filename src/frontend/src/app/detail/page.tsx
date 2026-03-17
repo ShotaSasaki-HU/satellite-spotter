@@ -4,7 +4,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrajectoryResponse } from "@/types/trajectory";
-import { Loader2, ChevronLeft, Play, Pause } from "lucide-react";
+import { Loader2, ChevronLeft, Play, Pause, FastForward, Rewind } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import dynamic from "next/dynamic";
@@ -24,7 +24,7 @@ function DetailContent() {
   const router = useRouter();
 
   const searchParams = useSearchParams();
-  const locationName = searchParams.get("location_name") || "観測スポット";
+  const locationName = searchParams.get("location_name") || "マイスポット";
   const lat = searchParams.get("lat");
   const lon = searchParams.get("lon");
   const startTime = searchParams.get("start_time");
@@ -36,8 +36,9 @@ function DetailContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  // スライダーのインデックス
-  const [timeIndex, setTimeIndex] = useState(0);
+  const [timeIndex, setTimeIndex] = useState(0); // スライダーのインデックス
+  const [isPlaying, setIsPlaying] = useState(false); // 再生状態
+  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 再生速度
 
   useEffect(() => {
     if (!lat || !lon || !startTime || !endTime || designators.length === 0) return;
@@ -62,6 +63,31 @@ function DetailContent() {
 
     fetchTrajectory();
   }, [lat, lon, startTime, endTime]);
+
+  // 自動再生のタイマー処理
+  useEffect(() => {
+    // 再生中でない，またはデータがない場合は何もしない．
+    if (!isPlaying || !data || data.trajectories.length === 0) return;
+
+    // 現在のインデックスが最後まで到達していたら再生を停止して終了
+    if (timeIndex >= data.trajectories.length - 1) {
+      setIsPlaying(false);
+      return;
+    }
+
+    // 現在のコマの時刻と，次のコマの時刻を取得して差分（ミリ秒）を計算する．
+    const currentTime = new Date(data.trajectories[timeIndex].timestamp).getTime();
+    const nextTime = new Date(data.trajectories[timeIndex + 1].timestamp).getTime();
+    const timeDiffMs = (nextTime - currentTime) / playbackSpeed;
+
+    // 計算した差分の時間だけ待ってから，インデックスを1つ進める．
+    const timerId = setTimeout(() => {
+      setTimeIndex((prev) => prev + 1);
+    }, timeDiffMs);
+
+    // クリーンアップ関数：コンポーネントが破棄されたり，インデックスが変わる前にタイマーをキャンセルする．
+    return () => clearTimeout(timerId);
+  }, [isPlaying, timeIndex, data]);
 
   if (loading) return <div className="h-full w-full flex justify-center items-center"><Loader2 className="animate-spin text-compass-gold" size={48} /></div>;
   if (error) return <div className="text-red-500 text-center mt-20">{error}</div>;
@@ -120,9 +146,39 @@ function DetailContent() {
           className="w-full accent-compass-gold cursor-pointer"
         />
         
-        <div className="flex justify-between text-xs text-text-muted mt-1">
-          <span>見え始め</span>
-          <span>見え終わり</span>
+        <div className="relative flex justify-center items-center text-xs text-text-muted mt-1">
+          <Rewind
+            size={18}
+            className="mr-4 text-compass-gold hover:text-compass-gold-hover cursor-pointer"
+            onClick={() => setPlaybackSpeed((prev) => Math.max(1, prev / 2))}
+          />
+
+          {isPlaying ? (
+            <button onClick={() => setIsPlaying(false)} className="text-compass-gold hover:text-compass-gold-hover cursor-pointer">
+              <Pause size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                // 最後まで到達している状態でPlayを押されたら最初から再生する．
+                if (data && timeIndex >= data.trajectories.length - 1) {
+                  setTimeIndex(0);
+                }
+                setIsPlaying(true);
+              }}
+              className="text-compass-gold hover:text-compass-gold-hover cursor-pointer"
+            >
+              <Play size={20} />
+            </button>
+          )}
+
+          <FastForward
+            size={18}
+            className="ml-4 text-compass-gold hover:text-compass-gold-hover cursor-pointer"
+            onClick={() => setPlaybackSpeed((prev) => Math.min(64, prev * 2))}
+          />
+
+          <span className="absolute left-1/2 ml-14 text-text-muted text-lg tracking-wider">{playbackSpeed}×</span>
         </div>
       </div>
     </div>
