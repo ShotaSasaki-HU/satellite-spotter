@@ -5,7 +5,6 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { TrajectoryResponse } from "@/types/trajectory";
 import { Loader2, ChevronLeft, Play, Pause } from "lucide-react";
-import Link from "next/link";
 
 import dynamic from "next/dynamic";
 const SkySimulator = dynamic(() => import("@/components/SkySimulator"), {
@@ -14,7 +13,7 @@ const SkySimulator = dynamic(() => import("@/components/SkySimulator"), {
     <div className="h-full w-full flex flex-col items-center justify-center bg-black">
       <Loader2 className="animate-spin text-compass-gold mb-4" size={40} />
       <p className="text-compass-gold tracking-widest text-sm animate-pulse">
-        宇宙空間を初期化中...
+        宇宙空間を生成中...
       </p>
     </div>
   ),
@@ -34,7 +33,7 @@ function DetailContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
-  // スライダーの値（0 〜 29 のインデックス）
+  // スライダーのインデックス
   const [timeIndex, setTimeIndex] = useState(0);
 
   useEffect(() => {
@@ -70,6 +69,7 @@ function DetailContent() {
   // 時刻を日本時間で見やすくフォーマット
   const currentTimeStr = new Date(currentTrajectory.timestamp).toLocaleTimeString("ja-JP", {
     timeZone: "Asia/Tokyo",
+    month: "short", day: "numeric", weekday: "short",
     hour: "2-digit", minute: "2-digit", second: "2-digit"
   });
 
@@ -81,23 +81,30 @@ function DetailContent() {
       </div>
 
       {/* ヘッダーUI（前面） */}
-      <div className="absolute top-6 left-0 w-45 md:w-48 h-12 flex items-center justify-center bg-bg-primary/80 backdrop-blur-sm border-r-2 border-r-compass-gold z-10">
+      <div className={`
+          absolute top-6 left-0 w-45 md:w-48 h-12
+          flex items-center justify-center
+          bg-bg-primary border-r-2 border-r-compass-gold z-1000
+        `}
+      >
         <div className="w-full flex justify-center items-center gap-3">
           {/* ブラウザバック */}
           <button onClick={() => window.history.back()}>
-            <ChevronLeft size={30} className="text-compass-gray hover:text-compass-gold"/>
+            <ChevronLeft size={30} className="text-compass-gray hover:text-compass-gray-hover"/>
           </button>
-          <h1 className="text-compass-gold text-xl md:text-2xl">天球シミュ</h1>
+          <h1 className="text-compass-gold text-xl md:text-2xl">見えかた</h1>
         </div>
       </div>
 
-      {/* 下部のスライダーUI（コクピット風） */}
-      <div className="absolute bottom-20 md:bottom-10 left-1/2 -translate-x-1/2 w-[90%] md:w-[600px] bg-bg-primary/80 backdrop-blur-md border border-compass-gold/30 rounded-xl p-4 z-10 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-compass-gold font-mono text-xl tracking-wider">
-            {currentTimeStr}
-          </span>
-          <span className="text-xs text-text-muted">{locationName}</span>
+      {/* 下部のスライダーUI */}
+      <div className={`
+          absolute bottom-3 left-1/2 -translate-x-1/2 w-[90%] md:w-[500px]
+          bg-bg-primary border border-compass-gold/70 rounded-xl p-4 z-10
+        `}
+      >
+        <div className="flex justify-between items-center mb-2 gap-6">
+          <span className="text-compass-gold text-xl tracking-wider shrink-0">{currentTimeStr}</span>
+          <span className="text-text-muted text-base truncate">{locationName}</span>
         </div>
         
         {/* レンジスライダー */}
@@ -111,8 +118,8 @@ function DetailContent() {
         />
         
         <div className="flex justify-between text-xs text-text-muted mt-1">
-          <span>開始</span>
-          <span>終了</span>
+          <span>見え始め</span>
+          <span>見え終わり</span>
         </div>
       </div>
     </div>
