@@ -105,7 +105,7 @@ function DetailContent() {
           bg-bg-primary border border-compass-gold/70 rounded-xl p-4 z-10
         `}
       >
-        <div className="flex justify-between items-center mb-2 gap-6">
+        <div className="flex flex-col md:flex-row md:gap-6 justify-between items-center mb-2">
           <span className="text-compass-gold text-xl tracking-wider shrink-0">{currentTimeStr}</span>
           <span className="text-text-muted text-base truncate">{locationName}</span>
         </div>
