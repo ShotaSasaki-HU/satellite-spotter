@@ -20,7 +20,7 @@ def calc_visible_time_ratio(
     t_rise = pass_event['rise_time']
     t_set = pass_event['set_time']
     # 地球時（Terrestrial Time）のユリウス日の数値配列に変換してlinspace
-    tt_values = np.linspace(t_rise.tt, t_set.tt, num=10, endpoint=True)
+    tt_values = np.linspace(t_rise.tt, t_set.tt, num=50, endpoint=True)
     # skyfield.timelib.Timeの時刻列
     t = ts.tt_jd(tt_values)
 
@@ -55,7 +55,8 @@ def calc_visible_time_ratio(
 def calc_moon_fraction_illuminated(
         pass_event: dict,
         spot_pos: Topos,
-        eph: SpiceKernel):
+        eph: SpiceKernel,
+        min_score: float = 0.8):
     """
     1つのイベントに対して，月が照らされている割合を計算する．
     """
@@ -70,7 +71,7 @@ def calc_moon_fraction_illuminated(
     # What fraction of a spherical body is illuminated by the sun.
     moon_fract_illumi = (earth + spot_pos).at(t_peak).observe(moon).apparent().fraction_illuminated(sun)
 
-    return 1.0 - moon_fract_illumi
+    return 1.0 - (moon_fract_illumi * (1 - min_score))
 
 def get_meteorological_score(pass_event: dict, weather_df: pd.DataFrame) -> tuple[float, float, float]:
     """
