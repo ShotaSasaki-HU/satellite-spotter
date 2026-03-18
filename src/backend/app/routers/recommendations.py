@@ -8,7 +8,7 @@ from app.db import session
 from app.schemas import event as schemas_event
 from app.crud import spot as crud_spot
 from app.services.event_service import get_events_for_the_coord, fetch_weather_limited
-from app.services.sat_service import SatDataService, get_sat_data_service
+from app.services.astro_service import AstroDataService, get_astro_data_service
 from app.core.config import Settings, get_settings
 
 router = APIRouter()
@@ -22,7 +22,7 @@ async def recommend_events(
         min_visibility_score: float = Query(0.3),
         db: Session = Depends(session.get_db),
         settings: Settings = Depends(get_settings),
-        sat_service: SatDataService = Depends(get_sat_data_service)):
+        astro_service: AstroDataService = Depends(get_astro_data_service)):
     # 探索中心と探索半径を用いて，観測候補スポットのRowオブジェクトのリストを取得．
     potential_spots = crud_spot.get_top_spots_by_static_score(
         db=db, settings=settings, lat=lat, lon=lon, radius_km=radius, limit=10
@@ -57,7 +57,7 @@ async def recommend_events(
             elevation_m=row.elevation_m,
             horizon_profile=row.horizon_profile,
             sky_glow_score=row.sky_glow_score,
-            sat_service=sat_service,
+            astro_service=astro_service,
             weather_df=weather_df,
             min_visibility_score=min_visibility_score
         )

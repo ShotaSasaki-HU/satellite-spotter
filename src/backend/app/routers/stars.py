@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Query, Depends
 from app.schemas import star as schemas_star
 from datetime import datetime
-from app.services.sat_service import SatDataService, get_sat_data_service
+from app.services.astro_service import AstroDataService, get_astro_data_service
 from skyfield.api import Topos, load, Star
 from skyfield.data import hipparcos
 
@@ -12,11 +12,11 @@ def get_starry_sky_snapshot(
         time: datetime = Query(...),
         lat: float = Query(...),
         lon: float = Query(...),
-        sat_service: SatDataService = Depends(get_sat_data_service)):
+        astro_service: AstroDataService = Depends(get_astro_data_service)):
     """
     指定された時刻における，恒星の方位角・仰角を返す．
     """
-    ts = sat_service.get_timescale()
+    ts = astro_service.get_timescale()
     t_target = ts.from_datetime(time)
 
     return

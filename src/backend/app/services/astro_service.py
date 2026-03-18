@@ -1,15 +1,17 @@
-# app/services/sat_service.py
-from skyfield.api import load, EarthSatellite, Timescale
+# app/services/astro_service.py
+from skyfield.api import load, EarthSatellite, Timescale, Star
+from skyfield.jpllib import SpiceKernel
+from skyfield.data import hipparcos
 from app.core.config import get_settings
 import re
 
-class SatDataService:
+class AstroDataService:
     """
     TLEデータをロードし，衛星インスタンスをキャッシュするサービス．
     アプリ起動時に一度だけ初期化されることを想定．
     """
-    def __init__(self, tle_starlink_url: str, tle_stations_url: str, ts: Timescale):
-        print("SatDataService: TLEファイルの読み込みを開始...")
+    def __init__(self, tle_starlink_url: str, tle_stations_url: str, ts: Timescale, eph: SpiceKernel):
+        print("AstroDataService: TLEファイルの読み込みを開始...")
 
         starlink_sats = load.tle(tle_starlink_url)
         station_sats = load.tle(tle_stations_url)
@@ -32,9 +34,24 @@ class SatDataService:
             self._launch_group_to_sats.setdefault(launch_group, []) # キーが存在しない時のみ空のリストをセット
             self._launch_group_to_sats[launch_group].append(instance)
         
-        print(f"SatDataService: {len(self._intldesg_to_sat)}機の衛星をキャッシュ完了．")
+        print(f"AstroDataService: {len(self._intldesg_to_sat)}機の衛星をキャッシュ完了．")
     
-        self.ts = ts
+        self._ts = ts
+        self._eph = eph
+
+        print("AstroDataService: Hipparcos星表の読み込みを開始...")
+        MAGNITUDE_LIMIT = 4.5
+        with load.open('hip_main.dat') as f:
+            df = hipparcos.load_dataframe(f)
+            
+        bright_stars_df = df[df['magnitude'] <= MAGNITUDE_LIMIT]
+        
+        # SkyfieldのStarオブジェクトとして一括生成
+        self._bright_stars = Star.from_dataframe(bright_stars_df)
+        self._star_hip_ids = bright_stars_df.index.tolist()
+        self._star_magnitudes = bright_stars_df['magnitude'].tolist()
+        
+        print(f"AstroDataService: {len(self._star_hip_ids)}個の恒星をキャッシュ完了．")
 
     def get_all_satellites(self) -> dict[str, EarthSatellite]:
         """
@@ -52,19 +69,35 @@ class SatDataService:
         """
         キャッシュされたTimescaleインスタンスを返す．
         """
-        return self.ts
+        return self._ts
+    
+    def get_ephemeris(self) -> SpiceKernel:
+        """
+        キャッシュされた天体暦を返す．
+        """
+        return self._eph
+    
+    # 星空データ用のゲッター
+    def get_bright_stars(self) -> Star:
+        return self._bright_stars
+        
+    def get_star_hip_ids(self) -> list[int]:
+        return self._star_hip_ids
+        
+    def get_star_magnitudes(self) -> list[float]:
+        return self._star_magnitudes
 
-ts = load.timescale()
 settings = get_settings()
-sat_data_service_instance = SatDataService(
+astro_data_service_instance = AstroDataService(
     tle_starlink_url=settings.PATH_TLE_STARLINK,
     tle_stations_url=settings.PATH_TLE_STATIONS,
-    ts=ts
+    ts=load.timescale(),
+    eph=load('de421.bsp')
 )
 
-def get_sat_data_service() -> SatDataService:
+def get_astro_data_service() -> AstroDataService:
     """
     FastAPIのDepends()に渡すための関数．
     起動時に作成された単一のインスタンスを返す．
     """
-    return sat_data_service_instance
+    return astro_data_service_instance

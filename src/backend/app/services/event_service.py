@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from app.schemas.event import Event, Score
 import pandas as pd
 from app.services.score_service import calc_event_score
-from app.services.sat_service import SatDataService
+from app.services.astro_service import AstroDataService
 import httpx
 import asyncio
 
@@ -266,7 +266,7 @@ def get_events_for_the_coord(
         elevation_m: float,
         horizon_profile: list[float],
         sky_glow_score: float,
-        sat_service: SatDataService,
+        astro_service: AstroDataService,
         weather_df: pd.DataFrame,
         min_visibility_score: float) -> list[Event]:
     """
@@ -282,11 +282,11 @@ def get_events_for_the_coord(
     
     # 計算対象にする衛星の国際衛星識別符号を特定
     launch_group_to_sats = {}
-    launch_group_to_sats.update(get_potential_trains(launch_group_to_sats=sat_service.get_launch_groups()))
-    launch_group_to_sats.update(get_iss_as_a_group_member(intldesg_to_sat=sat_service.get_all_satellites()))
+    launch_group_to_sats.update(get_potential_trains(launch_group_to_sats=astro_service.get_launch_groups()))
+    launch_group_to_sats.update(get_iss_as_a_group_member(intldesg_to_sat=astro_service.get_all_satellites()))
 
     # 時刻・検索期間設定
-    ts = sat_service.get_timescale()
+    ts = astro_service.get_timescale()
     t0 = ts.now()
     t1 = ts.utc(t0.utc_datetime() + timedelta(days=10))
 
