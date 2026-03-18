@@ -49,7 +49,7 @@ function MapController({ pinPosition, setPinPosition, setMapCenter, radius, step
   useEffect(() => {
     if (pinPosition) {
       // flyTo(座標, ズーム率, オプション)
-      map.flyTo([pinPosition.lat, pinPosition.lon], 12, {
+      map.flyTo([pinPosition.lat, pinPosition.lon], undefined, {
         duration: 1.0, // 時間をかけて移動
       });
     }
