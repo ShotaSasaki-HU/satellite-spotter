@@ -41,7 +41,7 @@ class AstroDataService:
 
         print("AstroDataService: Hipparcos星表の読み込みを開始...")
         MAGNITUDE_LIMIT = 4.5
-        with load.open('hip_main.dat') as f:
+        with load.open(hipparcos.URL) as f:
             df = hipparcos.load_dataframe(f)
             
         bright_stars_df = df[df['magnitude'] <= MAGNITUDE_LIMIT]
