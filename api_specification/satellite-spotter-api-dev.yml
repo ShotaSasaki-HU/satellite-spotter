@@ -278,6 +278,81 @@ paths: # エンドポイント
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/stars:
+    get:
+      summary: 任意の時刻と地点における恒星の見え方を取得する．
+      parameters:
+        - name: time
+          in: query
+          required: true
+          description: 対象時刻（ISO 8601，UTC）
+          schema:
+            type: string
+            format: date-time
+            example: "2025-10-11T19:55:45+09:00"
+        - name: lat
+          in: query
+          required: true
+          description: 観測地点の緯度（十進法度単位）
+          schema:
+            $ref: '#/components/schemas/Latitude'
+        - name: lon
+          in: query
+          required: true
+          description: 観測地点の経度（十進法度単位）
+          schema:
+            $ref: '#/components/schemas/Longitude'
+      responses:
+        '200':
+          description: 成功時のレスポンス
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-10-11T19:50:45+09:00"
+                  stars:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        positions:
+                          type: array
+                          description: 当該時刻における恒星の位置リスト
+                          items:
+                            type: object
+                            properties:
+                              star_name:
+                                type: string
+                                example: "Vega"
+                                description: 恒星の固有名
+                              az:
+                                type: number
+                                format: float
+                                description: 当該恒星の方位角（度）
+                              alt:
+                                type: number
+                                format: float
+                                description: 当該恒星の仰俯角（度）
+                              magnitude:
+                                type: number
+                                format: float
+                                description: 等級
+        '400': # Bad Request（クライアントのミス）
+          description: パラメータが不正な場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500': # Internal Server Error（サーバーのミス）
+          description: サーバー内部で予期せぬエラーが発生した場合
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   parameters:
     Limit:
