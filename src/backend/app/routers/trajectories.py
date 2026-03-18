@@ -1,6 +1,6 @@
 # app/routers/trajectories.py
 from fastapi import APIRouter, Depends, HTTPException, Query
-from datetime import datetime, timezone
+from datetime import datetime
 from skyfield.api import Topos
 import numpy as np
 from app.core.config import Settings, get_settings
@@ -51,38 +51,53 @@ def get_trajectory_details(
     
     observer = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
 
+    eph = astro_service.get_ephemeris()
+    sun, earth = eph['sun'], eph['earth']
+
     # ベクトルを活用したSkyfieldでの計算
+    ## 太陽高度をループ外で全時刻分，一括計算する．
+    sun_alt = (earth + observer).at(t).observe(sun).apparent().altaz()[0].degrees
+    is_dark_enough = sun_alt <= -6 # 真偽値リスト
+
     ## 衛星ごとに全時刻の位置を一括計算して辞書に格納
-    all_positions_by_sat: dict[str, list[dict]] = {}
+    all_positions_by_sat: dict[str, dict] = {}
     for sat in target_instances:
         # 時刻配列't'を使ってベクトル計算
         alt, az, distance = (sat - observer).at(t).altaz()
 
-        positions = [
-            {'az': az.degrees[i], 'alt': alt.degrees[i]} for i in range(SAMPLING_COUNT)
-        ]
-        all_positions_by_sat[sat.model.intldesg] = positions
+        alt_deg = alt.degrees
+        az_deg = az.degrees
+
+        is_above_horizon = alt_deg > 0
+        is_sun_lit = sat.at(t).is_sunlit(eph)
+        is_visible = is_dark_enough & is_above_horizon & is_sun_lit # 可視判定マスク
+
+        all_positions_by_sat[sat.model.intldesg] = {
+            'az': az_deg,
+            'alt': alt_deg,
+            'is_visible': is_visible
+        }
     
     ## スキーマに合わせてデータを再構築
-    trajectories = []
-    for i, t_current in enumerate(t, start=0):
-        positions_at_t = []
+    trajectories: list[Trajectory] = []
+    for i, t_i in enumerate(t.utc_datetime()):
+        positions_at_t: list[Position] = []
 
-        # クエリで指定された順序を維持してループ
         for intldesg in international_designators:
             sat_pos_data = all_positions_by_sat.get(intldesg, None)
 
-            if sat_pos_data:
-                pos_at_i = sat_pos_data[i]
+            # t_iにおいて is_visible が True の衛星だけを追加する．
+            if sat_pos_data and sat_pos_data['is_visible'][i]:
                 posi = Position(
                     international_designator=intldesg,
-                    az = pos_at_i['az'],
-                    alt = pos_at_i['alt']
+                    az=float(sat_pos_data['az'][i]),
+                    alt=float(sat_pos_data['alt'][i])
                 )
                 positions_at_t.append(posi)
         
+        # その時刻に「見える」衛星だけが残ったリストを格納
         trajectory = Trajectory(
-            timestamp=t_current.astimezone(timezone.utc).isoformat(),
+            timestamp=t_i.isoformat(),
             positions=positions_at_t
         )
         trajectories.append(trajectory)
