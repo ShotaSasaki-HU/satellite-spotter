@@ -87,7 +87,7 @@ export default function MySpotObserverPage() {
               onClick={() => {
                 router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&source=my-spot`);
               }}
-              className="text-text-primary bg-compass-gold p-2 cursor-pointer rounded-lg"
+              className="text-text-primary bg-compass-gold hover:bg-compass-gold-hover p-2 cursor-pointer rounded-lg"
             >
               決定
             </button>
