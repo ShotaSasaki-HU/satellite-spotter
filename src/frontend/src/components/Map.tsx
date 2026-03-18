@@ -4,7 +4,8 @@
 import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Layers2 } from 'lucide-react';
 
 const DefaultIcon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -79,33 +80,56 @@ function MapController({ pinPosition, setPinPosition, setMapCenter, radius, step
 }
 
 export default function Map({ pinPosition, setPinPosition, setMapCenter, radius, step }: MapProps) {
-  return (
-    <MapContainer
-      key="satellite-spotter-map" // HMR時のエラー回避のためのキー（効いてない？）
-      center={[pinPosition.lat, pinPosition.lon]} // 初期座標
-      zoom={12}
-      style={{ height: "100%", width: "100%" }} // 親要素いっぱいに広げる
-      zoomControl={false} // UIをスッキリさせるために一旦オフ
-    >
-      {/* <TileLayer
-        attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-      />
-      <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
-      /> */}
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+  const [isAerialPhoto, setIsAerialPhoto] = useState(false);
 
-      <MapController
-        pinPosition={pinPosition}
-        setPinPosition={setPinPosition}
-        setMapCenter={setMapCenter}
-        radius={radius}
-        step={step}
-      />
-    </MapContainer>
+  return (
+    <div className="relative h-full w-full">
+      <MapContainer
+        key="satellite-spotter-map" // HMR時のエラー回避のためのキー（効いてない？）
+        center={[pinPosition.lat, pinPosition.lon]} // 初期座標
+        zoom={12}
+        style={{ height: "100%", width: "100%" }} // 親要素いっぱいに広げる
+        zoomControl={false} // UIをスッキリさせるために一旦オフ
+      >
+        {isAerialPhoto ? (
+          <>
+            <TileLayer
+              attribution='Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}"
+            />
+          </>
+        ) : (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        )}
+
+        <MapController
+          pinPosition={pinPosition}
+          setPinPosition={setPinPosition}
+          setMapCenter={setMapCenter}
+          radius={radius}
+          step={step}
+        />
+      </MapContainer>
+
+      <button
+        onClick={() => setIsAerialPhoto((prev) => !prev)}
+        className={`
+          absolute bottom-4 left-4 z-1000
+          flex h-12 w-12 items-center justify-center
+          bg-bg-primary hover:bg-bg-primary-hover text-compass-gold hover:text-compass-gold-hover
+          border border-compass-gold hover:border-compass-gold-hover
+          rounded-full shadow-md cursor-pointer
+        `}
+        title="地図の切り替え"
+      >
+        <Layers2 size={24} />
+      </button>
+    </div>
   );
 }
