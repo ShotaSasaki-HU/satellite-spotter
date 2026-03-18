@@ -67,10 +67,10 @@ export default function SpotRecommenderPage() {
       {/* 浮いているUIボックス */}
       <div
         className={`
-          absolute top-24 left-1/2 -translate-x-1/2
-          bg-bg-primary w-[85%] md:w-lg
-          border-t-2 border-t-compass-gold z-1000
-          p-1
+          absolute top-22 left-1/2 -translate-x-1/2
+          bg-bg-primary w-[90%] md:w-lg
+          border border-compass-gold z-1000
+          p-2 rounded-xl
         `}
       >
         {/* ステップ1：ピン立てUI */}
@@ -88,7 +88,7 @@ export default function SpotRecommenderPage() {
             <div className="flex justify-end">
               <button
                 onClick={() => setStep(1)}
-                className="text-text-primary bg-compass-gold p-2 cursor-pointer"
+                className="text-text-primary bg-compass-gold p-2 cursor-pointer rounded-lg"
               >
                 次へ
               </button>
@@ -122,7 +122,7 @@ export default function SpotRecommenderPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setStep(0)}
-                className="text-text-primary bg-compass-gray p-2 cursor-pointer"
+                className="text-text-primary bg-compass-gray p-2 cursor-pointer rounded-lg"
               >
                 戻る
               </button>
@@ -131,7 +131,7 @@ export default function SpotRecommenderPage() {
                   // 検索条件をクエリパラメータにして結果ページへ遷移
                   router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&radius=${radius}&source=recommender`);
                 }}
-                className="text-text-primary bg-compass-gold p-2 cursor-pointer"
+                className="text-text-primary bg-compass-gold p-2 cursor-pointer rounded-lg"
               >
                 検索
               </button>

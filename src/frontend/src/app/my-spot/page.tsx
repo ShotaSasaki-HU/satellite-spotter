@@ -65,10 +65,10 @@ export default function MySpotObserverPage() {
       {/* 浮いているUIボックス */}
       <div
         className={`
-            absolute top-24 left-1/2 -translate-x-1/2
-            bg-bg-primary w-[85%] md:w-lg
-            border-t-2 border-t-compass-gold z-1000
-            p-1
+            absolute top-22 left-1/2 -translate-x-1/2
+            bg-bg-primary w-[90%] md:w-lg
+            border border-compass-gold z-1000
+            p-2 rounded-xl
           `}
       >
         {/* ピン立てUI */}
@@ -87,9 +87,9 @@ export default function MySpotObserverPage() {
               onClick={() => {
                 router.push(`/results?lat=${pinPosition.lat}&lon=${pinPosition.lon}&source=my-spot`);
               }}
-              className="text-text-primary bg-compass-gold p-2 cursor-pointer"
+              className="text-text-primary bg-compass-gold p-2 cursor-pointer rounded-lg"
             >
-              次へ
+              決定
             </button>
           </div>
         </div>
