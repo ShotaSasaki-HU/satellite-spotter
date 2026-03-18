@@ -3,9 +3,9 @@
 
 import { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Sky, OrbitControls, Text, Billboard } from "@react-three/drei";
+import { Sky, OrbitControls, Text, Billboard, Line } from "@react-three/drei";
 import * as THREE from "three";
-import { SatPosition } from "@/types/trajectory";
+import { SatPosition, Trajectory } from "@/types/trajectory";
 import { StarPosition } from "@/types/star";
 import { useSimulationStore } from "@/store/useSimulationStore";
 
@@ -14,6 +14,7 @@ interface SkySimulatorProps {
   currentTimeIso: string;
   lat: number;
   lon: number;
+  allTrajectories: Trajectory[];
 }
 
 // 値の変更を遅延させるカスタムフック
@@ -193,6 +194,74 @@ function SatellitePoint({ pos }: { pos: SatPosition }) {
   );
 }
 
+// 代表衛星1機だけの「軌跡の線」を描画するコンポーネント
+function RepresentativeTrajectory({ allTrajectories }: { allTrajectories: Trajectory[] }) {
+  const RADIUS = 50;
+
+  const points = useMemo(() => {
+    // 1. 代表となる衛星のIDを決定（最初に見つかった衛星をターゲットにする．）
+    let targetId: string | null = null;
+    for (const traj of allTrajectories) {
+      if (traj.positions.length > 0) {
+        targetId = traj.positions[0].international_designator;
+        break;
+      }
+    }
+
+    if (!targetId) return [];
+
+    const coords: [number, number, number][] = [];
+
+    // 2. 全時刻のデータから，代表衛星の座標だけを抽出して配列にする．
+    for (const traj of allTrajectories) {
+      const pos = traj.positions.find((p: SatPosition) => p.international_designator === targetId);
+      if (pos) {
+        const azRad = THREE.MathUtils.degToRad(pos.az);
+        const altRad = THREE.MathUtils.degToRad(pos.alt);
+        const x = RADIUS * Math.cos(altRad) * Math.sin(azRad);
+        const y = RADIUS * Math.sin(altRad);
+        const z = -RADIUS * Math.cos(altRad) * Math.cos(azRad);
+
+        coords.push([x, y, z]);
+      }
+    }
+    return coords;
+  }, [allTrajectories]);
+
+  // 点が2つ以上ないと線が引けないためガード
+  if (points.length < 2) return null;
+
+  return (
+    <>
+      <mesh position={points[Math.floor(points.length / 2)]}>
+        <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+          <Text
+            position={[0, 1.5, 0]}
+            fontSize={1.0}
+            color="#fde047"
+            anchorX="center"
+            anchorY="middle"
+          >
+            軌道の目安
+          </Text>
+        </Billboard>
+      </mesh>
+
+      <Line
+        points={points}
+        color="#fde047" // 衛星本体と合わせた少し明るめのゴールド
+        lineWidth={2} // 線の太さ
+        transparent
+        opacity={0.3}   // 星空の邪魔にならないよう薄めに設定
+        dashed={true}   // 点線にする
+        dashScale={30}  // 破線の間隔スケール
+        dashSize={5}
+        gapSize={5}
+      />
+    </>
+  );
+}
+
 // 地平線のシルエットを描画するコンポーネント
 function HorizonSilhouette({ profile }: { profile: number[] | null }) {
   // 毎フレーム計算すると重いので、データが変わった時だけジオメトリを生成する（useMemo）
@@ -268,7 +337,7 @@ function HorizonSilhouette({ profile }: { profile: number[] | null }) {
   );
 }
 
-export default function SkySimulator({ currentPositions, currentTimeIso, lat, lon }: SkySimulatorProps) {
+export default function SkySimulator({ currentPositions, currentTimeIso, lat, lon, allTrajectories }: SkySimulatorProps) {
   const { horizonProfile } = useSimulationStore();
 
   const RADIUS_LABEL = 48;
@@ -276,8 +345,7 @@ export default function SkySimulator({ currentPositions, currentTimeIso, lat, lo
   const LABEL_Y = 2;
 
   return (
-    <Canvas camera={{ position: [0, 0.01, 0], fov: 75 }}
-    >
+    <Canvas camera={{ position: [0, 0.01, 0], fov: 75 }}>
       {/* ユーザーがドラッグでぐるぐる見渡せるようにする（地下には行けないよう制限） */}
       {/* PolarAngle: おそらく真下が0度で真上が180度 */}
       <OrbitControls
@@ -306,6 +374,8 @@ export default function SkySimulator({ currentPositions, currentTimeIso, lat, lo
       <Text position={[RADIUS_LABEL * Math.sin(- Math.PI * 3 / 4), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI * 3 / 4)]} fontSize={LABEL_SIZE} color="white" rotation={[0, Math.PI / 4, 0]}>北西</Text>
 
       <HorizonSilhouette profile={horizonProfile} />
+
+      <RepresentativeTrajectory allTrajectories={allTrajectories} />
 
       {/* 現在時刻の衛星たちを描画 */}
       {currentPositions.map((pos) => (

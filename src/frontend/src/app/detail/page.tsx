@@ -111,6 +111,7 @@ function DetailContent() {
           currentTimeIso={currentTrajectory.timestamp}
           lat={Number(lat)}
           lon={Number(lon)}
+          allTrajectories={data.trajectories}
         />
       </div>
 
