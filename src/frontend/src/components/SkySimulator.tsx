@@ -121,7 +121,7 @@ function RealStars({ timeIso, lat, lon }: { timeIso: string, lat: number, lon: n
                 <Text
                   position={[0, 2, 0]} // 星の少し上に配置
                   fontSize={2}
-                  color="#a8b2d1" // 少し青白い上品な色
+                  color="white"
                   anchorX="center"
                   anchorY="middle"
                 >
@@ -181,7 +181,7 @@ function SatellitePoint({ pos }: { pos: SatPosition }) {
           <Text
             position={[0, 1.5, 0]} // 星の少し上に配置
             fontSize={1.0}
-            color="#a8b2d1" // 少し青白い上品な色
+            color="white"
             anchorX="center"
             anchorY="middle"
           >
