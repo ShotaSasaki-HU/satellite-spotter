@@ -38,7 +38,7 @@ function DetailContent() {
   
   const [timeIndex, setTimeIndex] = useState(0); // スライダーのインデックス
   const [isPlaying, setIsPlaying] = useState(true); // 再生状態
-  const [playbackSpeed, setPlaybackSpeed] = useState(1); // 再生速度
+  const [playbackSpeed, setPlaybackSpeed] = useState(16); // 再生速度
 
   useEffect(() => {
     if (!lat || !lon || !startTime || !endTime || designators.length === 0) return;
@@ -181,7 +181,7 @@ function DetailContent() {
           <FastForward
             size={18}
             className="ml-4 text-compass-gold hover:text-compass-gold-hover cursor-pointer"
-            onClick={() => setPlaybackSpeed((prev) => Math.min(64, prev * 2))}
+            onClick={() => setPlaybackSpeed((prev) => Math.min(128, prev * 2))}
           />
 
           <span className="absolute left-1/2 ml-14 text-text-muted text-lg tracking-wider">{playbackSpeed}×</span>
