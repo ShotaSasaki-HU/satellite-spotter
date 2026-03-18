@@ -1,5 +1,5 @@
 // src/types/trajectory.ts
-export interface Position {
+export interface SatPosition {
   international_designator: string;
   az: number;
   alt: number;
@@ -7,7 +7,7 @@ export interface Position {
 
 export interface Trajectory {
   timestamp: string;
-  positions: Position[];
+  positions: SatPosition[];
 }
 
 export interface TrajectoryResponse {

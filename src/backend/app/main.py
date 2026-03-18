@@ -1,7 +1,7 @@
 # app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import locations, recommendations, forecasts, trajectories
+from app.routers import locations, recommendations, forecasts, trajectories, stars
 from app.core.config import Settings, get_settings
 
 settings: Settings = get_settings()
@@ -25,6 +25,7 @@ app.include_router(locations.router)
 app.include_router(recommendations.router)
 app.include_router(forecasts.router)
 app.include_router(trajectories.router)
+app.include_router(stars.router)
 
 @app.get("/")
 def read_root():

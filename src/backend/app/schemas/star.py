@@ -1,7 +1,7 @@
 # app/schemas/star.py
 from pydantic import BaseModel
 
-class Position(BaseModel):
+class StarPosition(BaseModel):
     star_name: str
     az: float
     alt: float
@@ -9,4 +9,4 @@ class Position(BaseModel):
 
 class StarResponse(BaseModel):
     timestamp: str
-    positions: list[Position]
+    positions: list[StarPosition]

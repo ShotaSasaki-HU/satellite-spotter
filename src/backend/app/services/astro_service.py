@@ -10,7 +10,7 @@ class AstroDataService:
     TLEデータをロードし，衛星インスタンスをキャッシュするサービス．
     アプリ起動時に一度だけ初期化されることを想定．
     """
-    def __init__(self, tle_starlink_url: str, tle_stations_url: str, ts: Timescale, eph: SpiceKernel):
+    def __init__(self, tle_starlink_url: str, tle_stations_url: str):
         print("AstroDataService: TLEファイルの読み込みを開始...")
 
         starlink_sats = load.tle(tle_starlink_url)
@@ -36,8 +36,8 @@ class AstroDataService:
         
         print(f"AstroDataService: {len(self._intldesg_to_sat)}機の衛星をキャッシュ完了．")
     
-        self._ts = ts
-        self._eph = eph
+        self._ts: Timescale = load.timescale()
+        self._eph: SpiceKernel = load('de421.bsp')
 
         print("AstroDataService: Hipparcos星表の読み込みを開始...")
         MAGNITUDE_LIMIT = 4.5
@@ -91,8 +91,6 @@ settings = get_settings()
 astro_data_service_instance = AstroDataService(
     tle_starlink_url=settings.PATH_TLE_STARLINK,
     tle_stations_url=settings.PATH_TLE_STATIONS,
-    ts=load.timescale(),
-    eph=load('de421.bsp')
 )
 
 def get_astro_data_service() -> AstroDataService:

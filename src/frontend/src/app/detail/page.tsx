@@ -106,7 +106,12 @@ function DetailContent() {
     <div className="relative w-full h-full bg-black">
       {/* 3D天球キャンバス（全画面） */}
       <div className="absolute inset-0 z-0">
-        <SkySimulator currentPositions={currentTrajectory.positions} />
+        <SkySimulator
+          currentPositions={currentTrajectory.positions}
+          currentTimeIso={currentTrajectory.timestamp}
+          lat={Number(lat)}
+          lon={Number(lon)}
+        />
       </div>
 
       {/* ヘッダーUI（前面） */}

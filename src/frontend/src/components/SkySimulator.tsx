@@ -1,19 +1,143 @@
 // src/components/SkySimulator.tsx
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Sky, OrbitControls, Stars, Text } from "@react-three/drei";
+import { Sky, OrbitControls, Text, Billboard } from "@react-three/drei";
 import * as THREE from "three";
-import { Position } from "@/types/trajectory";
+import { SatPosition } from "@/types/trajectory";
+import { StarPosition } from "@/types/star";
 import { useSimulationStore } from "@/store/useSimulationStore";
 
 interface SkySimulatorProps {
-  currentPositions: Position[];
+  currentPositions: SatPosition[];
+  currentTimeIso: string;
+  lat: number;
+  lon: number;
+}
+
+// 値の変更を遅延させるカスタムフック
+function useDebounce<T>(value: T, delayMs: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    // delayMs 経過後に初めて state を更新するタイマーをセット
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    // 値が連続で変わった場合（スライダーをグリグリしている最中）は，前のタイマーをキャンセルしてタイマーをリセットする．
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delayMs]);
+
+  return debouncedValue;
+}
+
+function RealStars({ timeIso, lat, lon }: { timeIso: string, lat: number, lon: number }) {
+  const [stars, setStars] = useState<StarPosition[]>([]);
+  const RADIUS = 100; // 衛星(50)より奥に配置する
+
+  // ミリ秒単位でAPIを叩かないよう，時間を丸めて扱う．
+  const roundedTimeIso = useMemo(() => {
+    const date = new Date(timeIso);
+    date.setSeconds(0, 0); // 1分単位で丸める．
+    return date.toISOString();
+  }, [timeIso]);
+
+  // 丸めた時間をさらに「デバウンス」にかける．スライダーが止まってから，Nミリ秒後に初めて値が確定する．
+  const debouncedTimeIso = useDebounce(roundedTimeIso, 250);
+
+  // さらに AbortController を使って，直前の不要な通信を撃墜する．
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    const fetchStars = async () => {
+      // 既に走っている通信があればキャンセル
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      abortControllerRef.current = new AbortController();
+
+      try {
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/stars?time=${encodeURIComponent(roundedTimeIso)}&lat=${lat}&lon=${lon}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("星空の取得に失敗しました");
+        const data = await res.json();
+        setStars(data.positions);
+      } catch (error: any) {
+        if (error.name === "AbortError") {
+          console.log("星空の古いリクエストをキャンセルしました");
+          return;
+        }
+        console.error("星空エラー:", error);
+      }
+    };
+
+    fetchStars();
+  }, [debouncedTimeIso, lat, lon]);
+
+  return (
+    <group>
+      {stars.map((star, idx) => {
+        const azRad = THREE.MathUtils.degToRad(star.az);
+        const altRad = THREE.MathUtils.degToRad(star.alt);
+        const x = RADIUS * Math.cos(altRad) * Math.sin(azRad);
+        const y = RADIUS * Math.sin(altRad);
+        const z = -RADIUS * Math.cos(altRad) * Math.cos(azRad);
+
+        // 等級（1〜4.5）に応じて，星の大きさを変える．（数字が小さいほど明るく大きい）
+        const size = Math.max(0.2, 0.59 - (star.magnitude * 0.086));
+        // 0.5 = a + b.  , 2.25 = 4.5a + 4.5b
+        // 0.2 = 4.5a + b, 0.2 = 4.5a + b
+        // b = 2.05 / 3.5, a = 0.5 - (2.05 / 3.5)
+        // a = -0.086, b = 0.59
+
+        // 等級に応じて透明度も変える．
+        const opacity = Math.max(0.3, 1.2 - (star.magnitude * 0.2));
+        // 1 = a + b
+        // 0.3 = 4.5a + b, 0.3 = 4.5a + 1 - a
+        // a = -0.7 / 3.5 = -0.2, b = 1.2
+
+        return (
+          <group key={`${star.star_name}-${idx}`} position={[x, y, z]}>
+            {/* 星の光点 */}
+            <mesh>
+              <sphereGeometry args={[size, 8, 8]} />
+              <meshBasicMaterial color="#ffffff" opacity={opacity} />
+            </mesh>
+
+            {/* 星のラベル（固有名がある場合のみ） */}
+            {star.star_name !== "" && (
+              // Billboardコンポーネントは，勝手にカメラの方を向く．
+              <Billboard
+                follow={true}
+                lockX={false}
+                lockY={false}
+                lockZ={false}
+              >
+                <Text
+                  position={[0, 2, 0]} // 星の少し上に配置
+                  fontSize={2}
+                  color="#a8b2d1" // 少し青白い上品な色
+                  anchorX="center"
+                  anchorY="middle"
+                >
+                  {star.star_name}
+                </Text>
+              </Billboard>
+            )}
+          </group>
+        );
+      })}
+    </group>
+  );
 }
 
 // 衛星1つ1つを描画してチカチカさせるコンポーネント
-function SatellitePoint({ pos }: { pos: Position }) {
+function SatellitePoint({ pos }: { pos: SatPosition }) {
   const materialRef = useRef<THREE.MeshBasicMaterial>(null);
 
   // Az(方位角)とAlt(仰俯角)を3D空間のXYZ座標に変換する極座標計算
@@ -36,7 +160,9 @@ function SatellitePoint({ pos }: { pos: Position }) {
 
   return (
     <mesh position={[x, y, z]}>
+      {/* サイズ：0.5 */}
       <sphereGeometry args={[0.5, 16, 16]} />
+
       {/* 衛星の光（ゴールド系） */}
       <meshBasicMaterial
         ref={materialRef}
@@ -44,17 +170,25 @@ function SatellitePoint({ pos }: { pos: Position }) {
         transparent
         opacity={1}
       />
-      {/* 衛星のラベル */}
-      <Text
-        position={[0, 1.5, 0]}
-        rotation={[0, -azRad, 0]} // ラベルが常に読めるように回転
-        fontSize={1}
-        color="white"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {pos.international_designator}
-      </Text>
+      {['98067A', '21066A'].includes(pos.international_designator) && (
+        // Billboardコンポーネントは，勝手にカメラの方を向く．
+        <Billboard
+          follow={true}
+          lockX={false}
+          lockY={false}
+          lockZ={false}
+        >
+          <Text
+            position={[0, 1.5, 0]} // 星の少し上に配置
+            fontSize={1.0}
+            color="#a8b2d1" // 少し青白い上品な色
+            anchorX="center"
+            anchorY="middle"
+          >
+            国際宇宙ステーション
+          </Text>
+        </Billboard>
+      )}
     </mesh>
   );
 }
@@ -66,10 +200,10 @@ function HorizonSilhouette({ profile }: { profile: number[] | null }) {
     // データが無い場合は、ただの「平地（仰角0度）」のダミー配列を作る
     const data = profile && profile.length > 0 ? profile : [0, 0, 0, 0, 0, 0, 0, 0];
     const N = data.length;
-    
+
     // 衛星は，RADIUS=50．
-    const RADIUS_HORIZON = 49; 
-    
+    const RADIUS_HORIZON = 49;
+
     const positions = []; // 頂点のXYZ座標
     const indices = []; // 頂点を結んで三角形を作る順番
 
@@ -130,16 +264,11 @@ function HorizonSilhouette({ profile }: { profile: number[] | null }) {
         {/* opacityで星空を少しだけ透けさせる */}
         <meshBasicMaterial color="#0f172a" side={THREE.DoubleSide} transparent opacity={0.85} />
       </mesh>
-      
-      {/* 稜線をなぞるゴールドの輪郭線 */}
-      {/* <lineSegments geometry={edgesGeometry}>
-        <lineBasicMaterial color="#d4af37" transparent opacity={0.5} />
-      </lineSegments> */}
     </group>
   );
 }
 
-export default function SkySimulator({ currentPositions }: SkySimulatorProps) {
+export default function SkySimulator({ currentPositions, currentTimeIso, lat, lon }: SkySimulatorProps) {
   const { horizonProfile } = useSimulationStore();
 
   const RADIUS_LABEL = 48;
@@ -151,21 +280,21 @@ export default function SkySimulator({ currentPositions }: SkySimulatorProps) {
     >
       {/* ユーザーがドラッグでぐるぐる見渡せるようにする（地下には行けないよう制限） */}
       {/* PolarAngle: おそらく真下が0度で真上が180度 */}
-      <OrbitControls 
-        enablePan={false} 
+      <OrbitControls
+        enablePan={false}
         enableZoom={false}
         minPolarAngle={THREE.MathUtils.degToRad(75)}
         maxPolarAngle={Math.PI}
         rotateSpeed={-0.5}
       />
-      
+
       {/* リアルな星空と夜空の背景 */}
       <Sky distance={450000} sunPosition={[0, -1, 0]} inclination={0} azimuth={0.25} />
-      <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
-      
+      <RealStars timeIso={currentTimeIso} lat={lat} lon={lon} />
+
       {/* 地面（方角の目安となるグリッド） */}
       <gridHelper args={[200, 50, "#444", "#222"]} position={[0, -0.1, 0]} />
-      
+
       {/* 方角ラベル */}
       <Text position={[RADIUS_LABEL * Math.sin(Math.PI), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI)]} fontSize={LABEL_SIZE} color="white" rotation={[0, 0, 0]}>北</Text>
       <Text position={[RADIUS_LABEL * Math.sin(Math.PI * 3 / 4), LABEL_Y, RADIUS_LABEL * Math.cos(Math.PI * 3 / 4)]} fontSize={LABEL_SIZE} color="white" rotation={[0, - Math.PI / 4, 0]}>北東</Text>
