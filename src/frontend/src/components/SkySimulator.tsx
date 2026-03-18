@@ -199,12 +199,25 @@ function RepresentativeTrajectory({ allTrajectories }: { allTrajectories: Trajec
   const RADIUS = 50;
 
   const points = useMemo(() => {
-    // 1. 代表となる衛星のIDを決定（最初に見つかった衛星をターゲットにする．）
+    // 1. 代表となる衛星のIDを決定（軌道のズレを最小化するため，イベント期間の中間から探す．）
     let targetId: string | null = null;
-    for (const traj of allTrajectories) {
-      if (traj.positions.length > 0) {
-        targetId = traj.positions[0].international_designator;
+    const midIndex = Math.floor(allTrajectories.length / 2);
+
+    // まず真ん中から後ろ（未来）に向かって探す．
+    for (let i = midIndex; i < allTrajectories.length; i++) {
+      if (allTrajectories[i].positions.length > 0) {
+        targetId = allTrajectories[i].positions[0].international_designator;
         break;
+      }
+    }
+
+    // もし後ろに見つからなければ，真ん中から前（過去）に向かって探す．
+    if (!targetId) {
+      for (let i = midIndex - 1; i >= 0; i--) {
+        if (allTrajectories[i].positions.length > 0) {
+          targetId = allTrajectories[i].positions[0].international_designator;
+          break;
+        }
       }
     }
 
