@@ -294,7 +294,7 @@ def get_events_for_the_coord(
     spot_pos = Topos(latitude_degrees=lat, longitude_degrees=lon, elevation_m=elevation_m)
 
     # 天体暦設定
-    eph = load('de421.bsp')
+    eph = astro_service.get_ephemeris()
 
     events = []
     for group_name, instances in launch_group_to_sats.items():
