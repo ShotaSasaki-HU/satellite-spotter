@@ -1,10 +1,9 @@
 # app/routers/forecasts.py
 from fastapi import APIRouter, Depends, Query
-from skyfield.api import load
 import numpy as np
 from app.schemas import event as schemas_event
 from app.core.config import Settings, get_settings
-from app.services.dem_service import get_elevations_by_coords, calc_horizon_profile_parallel
+from app.services.dem_service import get_elevations_by_coords, calc_horizon_profile
 from app.services.event_service import get_events_for_the_coord, get_weather_dataframe_sync
 from app.services.score_service import calc_sky_glow_score
 from app.services.astro_service import AstroDataService, get_astro_data_service
@@ -30,7 +29,7 @@ def forecast_events(
 
     weather_df = get_weather_dataframe_sync(lat=lat, lon=lon, elevation_m=elevation_m)
 
-    horizon_profile, azimuths = calc_horizon_profile_parallel(
+    horizon_profile, azimuths = calc_horizon_profile(
         settings=settings,
         observer_lat=lat,
         observer_lon=lon,
