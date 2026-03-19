@@ -108,7 +108,6 @@ def calc_viewing_angle(observer_height: float, elevations_grid: np.ndarray, dist
     return max_angles
 
 def calc_horizon_profile(
-        settings: Settings,
         observer_lat: float,
         observer_lon: float,
         observer_eye_height: float = 1.55,
@@ -131,8 +130,7 @@ def calc_horizon_profile(
         (np.ndarray): 方位の配列
     """
     # 観測者の準備
-    observer_ground_elev = get_elevations_by_coords(coords=[{'lat': observer_lat, 'lon': observer_lon}],
-                                                    settings=settings)[0]
+    observer_ground_elev = get_elevations_by_coords(coords=[{'lat': observer_lat, 'lon': observer_lon}])[0]
     if observer_ground_elev < -1000 or np.isnan(observer_ground_elev):
         print(f"⚠️警告: 観測地点 ({observer_lat}, {observer_lon}) の標高が取得できませんでした．スキップします．")
         empty_profile = np.full(num_directions, np.nan)
@@ -162,7 +160,7 @@ def calc_horizon_profile(
     coords = [{'lat': lat, 'lon': lon} for lat, lon in zip(flat_lats, flat_lons)]
 
     # get_elevations_by_coordsは，同じTIFFファイルは1回しか開かない．
-    flat_elevations = get_elevations_by_coords(coords, settings)
+    flat_elevations = get_elevations_by_coords(coords)
 
     # 標高データを元の形に戻す．
     elevations_grid = flat_elevations.reshape(distances_grid.shape)
