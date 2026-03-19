@@ -3,15 +3,14 @@
 
 import Link from "next/link"; // Next.jsのリンク機能．<a>タグより高速な画面遷移．
 import { usePathname, useSearchParams } from "next/navigation"; // usePathnameは，現在のURLのパス名を読み取れるクライアントコンポーネントフック
-import { Search, MousePointerClick, UsersRound } from 'lucide-react';
-import { Suspense } from "react";
+import { Search, MousePointerClick, CircleQuestionMark } from 'lucide-react';
 
 // ナビゲーションの項目を配列で定義
 // 後でループ処理（.map）を使ってボタンを自動生成できる．
 const navItems = [
   { href: "/", label: "スポット検索", icon: <Search className="w-8 h-8 md:w-6 md:h-6"/>, sourceKey: "recommender" },
   { href: "/my-spot", label: "マイスポット", icon: <MousePointerClick className="w-8 h-8 md:w-6 md:h-6"/>, sourceKey: "my-spot" },
-  { href: "/report", label: "観測レポート", icon: <UsersRound className="w-8 h-8 md:w-6 md:h-6"/> }
+  { href: "/help", label: "使い方", icon: <CircleQuestionMark className="w-8 h-8 md:w-6 md:h-6"/> }
 ];
 
 // コンポーネント定義．`export default`で他のファイルから`import`できる．
@@ -49,17 +48,14 @@ export default function Navigation() {
             prefetch={true} // 事前読み込み
             className={`
               flex items-center justify-center p-2 w-full
-
               flex-col text-xs h-full
-
               md:flex-row md:justify-start md:text-base md:p-4 md:h-auto
-
               ${isActive ? "text-compass-gold bg-bg-primary-active" :
                 "text-text-muted hover:bg-bg-primary-hover"}
             `}
           >
             <span className="md:mr-3">{item.icon}</span>
-            <span className="hidden md:inline">{item.label}</span>
+            <span className="hidden md:inline text-base">{item.label}</span>
           </Link>
         );
       })}
