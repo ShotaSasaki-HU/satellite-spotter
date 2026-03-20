@@ -1,6 +1,21 @@
 # frontendのビルドと起動，backendのビルドと起動，dbの起動を全て担う．
 
 services:
+  # フロントエンド（Webサーバー）の定義
+  frontend:
+    build: ./frontend # frontend/Dockerfileを使ってビルド
+    ports:
+      - "3000:3000" # PCの3000番とコンテナの3000番を繋ぐ
+    volumes:
+      - ./frontend:/app # コードの変更を即座に画面に反映（ホットリロード）させる魔法
+      - /app/node_modules # ローカルとコンテナ内でOSが違うことによるエラーを防ぐバリア
+      - /app/.next # Next.jsのビルドキャッシュが競合するのを防ぐバリア
+    environment:
+      # フロントエンドからバックエンドAPIを叩くためのURLを環境変数で渡す
+      - NEXT_PUBLIC_API_URL=http://${LOCAL_IP_ADDRESS}:8080
+    depends_on:
+      - api # APIが立ち上がってからフロントエンドを起動
+
   # APIサーバーの定義
   api:
     build: ./backend # backend/Dockerfileを使ってビルド
