@@ -364,7 +364,7 @@ export default function SkySimulator({ currentPositions, currentTimeIso, lat, lo
       <OrbitControls
         enablePan={false}
         enableZoom={false}
-        minPolarAngle={THREE.MathUtils.degToRad(75)}
+        minPolarAngle={Math.PI / 2}
         maxPolarAngle={Math.PI}
         rotateSpeed={-0.5}
       />
