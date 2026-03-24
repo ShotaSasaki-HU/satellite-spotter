@@ -31,8 +31,6 @@
     <img src="https://img.shields.io/badge/-Docker-000000.svg?logo=docker&style=for-the-badge">
 </p>
 
-<p style="text-align: right">（<a href="#top">トップへ</a>）</p>
-
 ## 主な機能
 - スポット検索：指定したエリア周辺から，データに基づいた最適な観測スポットと観測イベントを推薦します．
 <p style="text-align: center;">
@@ -43,8 +41,6 @@
 <p style="text-align: center;">
     <img src="./images/マイスポット.PNG" alt="マイスポット.PNG">
 </p>
-
-<p style="text-align: right">（<a href="#top">トップへ</a>）</p>
 
 ## 開発ロードマップ
 
@@ -116,5 +112,3 @@ PoCで検証した要素技術を統合し，Webアプリケーションとし�
 
 （オ）インフラストラクチャ・環境構築（Docker）
 - docker-compose：フロントエンド，バックエンド，データベースの3層をコンテナ化．
-
-<p style="text-align: right">（<a href="#top">トップへ</a>）</p>
